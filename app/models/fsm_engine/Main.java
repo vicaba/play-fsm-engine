@@ -19,6 +19,7 @@ public class Main {
 			ActorRef actorRef = actorSystem.actorOf(Props.create(FSMActor.class, httpClient, fsmEngine), "FSM_Actor");
 
 			actorRef.tell(new ChangeStateMessage(), ActorRef.noSender());*/
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

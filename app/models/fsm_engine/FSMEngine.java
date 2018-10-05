@@ -1,5 +1,7 @@
 package models.fsm_engine;
 
+import akka.actor.ActorSystem;
+
 import models.fsm_engine.Exceptions.*;
 import models.fsm_entities.*;
 
@@ -7,9 +9,18 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RiotNotFoundException;
 import org.apache.jena.shared.Lock;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFSyntax;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,23 +30,40 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class FSMEngine {
-	private Model model = null, localModel = null;
-	private HTTPClient httpClient = null;
-	private boolean useLocalModel = false;
-	private State actualState = null;
+	private HTTPClient httpClient;
+
+	private Model model, localModel;
+	private boolean useLocalModel;
+	private State actualState;
 
 	private static final String FSM_IRI = "file:///D:/projects/JenaTest/ontologies/telecontrol_FSM.owl.ttl#telecontrolFSM";
 	private static final String TC_FSM_ONT = "ontologies/telecontrol_FSM.owl.ttl";
 	private static final String TC_SYS_ONT = "ontologies/telecontrol_system.owl.ttl";
 
-	public FSMEngine(HTTPClient httpClient) throws OntologyNotFoundException, InitialStateNotFoundException  {
+	public FSMEngine(HTTPClient httpClient, File file) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+		this.httpClient = httpClient;
+
 		State initialState;
 
 		FiniteStateMachine fsm;
 
-		this.httpClient = httpClient;
+		System.out.println(file.getName());
 
-		fsm = FSMQueries.readFSM(ModelFactory.createDefaultModel().read(TC_FSM_ONT), FSM_IRI);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+		StringBuilder out = new StringBuilder();
+		String line;
+		try {
+			while ((line = reader.readLine()) != null) {
+				out.append(line);
+			}
+		} catch (Exception e) {
+
+		}
+
+		System.out.println(out.toString());   //Prints the string content read from input stream
+
+
+		fsm = FSMQueries.readFSM(ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE"), FSM_IRI);
 		if (fsm == null) {
 			System.out.println("Can't find the Finite FSMEntities.State Machine");
 			throw new OntologyNotFoundException("The ontology " + TC_FSM_ONT + " was not found");
@@ -48,9 +76,13 @@ public class FSMEngine {
 		}
 
 		model = ModelFactory.createDefaultModel();
-		model.read(TC_SYS_ONT);
+		//Aqui toca leer informacion sobre el sistema, como los sensores, etc
+		//model.read(new FileInputStream(file), null);
 
 		System.out.println("Init state -> " + initialState.getLocalName());
+
+		localModel = null;
+		useLocalModel = false;
 
 		actualState = initialState;
 	}
@@ -61,7 +93,7 @@ public class FSMEngine {
 		//Check if the conditions will be checked only against data that arrive now
 		if (FSMQueries.onlyNewDataAllowed(actualState, model)) {
 			localModel = ModelFactory.createDefaultModel();
-			localModel.read(TC_SYS_ONT);
+			//localModel.read(TC_SYS_ONT);
 			useLocalModel = true;
 		} else {
 			useLocalModel = false;

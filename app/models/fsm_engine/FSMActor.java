@@ -8,12 +8,12 @@ public class FSMActor extends AbstractActor {
 
 	private HTTPClient httpClient;
 
-	public FSMActor(HTTPClient httpClient, FSMEngine fsmEngine) throws Exception {
+	public FSMActor(HTTPClient httpClient, FSMEngine fsmEngine) {
 		this.httpClient = httpClient;
 		this.fsmEngine = fsmEngine;
 	}
 
-	public void destroy() throws Exception {
+	public void destroy() {
 		httpClient.stop();
 	}
 

@@ -17,7 +17,7 @@ public class FunctionalTest extends WithApplication {
         // because it makes use of assets metadata that is configured from
         // the application.
 
-        Content html = views.html.index.render("Your new application is ready.");
+        Content html = views.html.index.render();
         assertThat("text/html").isEqualTo(html.contentType());
         assertThat(html.body()).contains("Your new application is ready.");
     }
