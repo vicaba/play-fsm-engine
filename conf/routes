@@ -9,9 +9,9 @@ GET     /                           controllers.HomeController.index()
 POST     /upload                    controllers.UploadFileController.upload()
 
 # Getting a new client
-GET     /fsm_client/:actorId       controllers.FsmClientController.startWebSocket(actorId: String)
+GET     /fsm_client/:actorId       controllers.FsmClientController.createFsmClient(actorId: String)
 
-GET     /fsm_client                controllers.FsmClientController.createFsmClient()
+GET     /fsm_client                controllers.FsmClientController.startWebSocket()
 
 
 # An example controller showing how to use dependency injection

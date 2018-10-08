@@ -8,6 +8,7 @@ import play.mvc.*;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.UUID;
 
 public class UploadFileController extends Controller {
 	private final FsmEngineFactory fsmEngineFactory;
@@ -26,10 +27,14 @@ public class UploadFileController extends Controller {
 			File file = picture.getFile();
 
 			try {
-				ActorRef actorRef = fsmEngineFactory.create(file);
+				final var uuid = UUID.randomUUID();
+
+				ActorRef actorRef = fsmEngineFactory.create(file, uuid);
+
+				actorRef.path();
 				actorRef.tell(new ChangeStateMessage(), ActorRef.noSender());
 
-				return redirect(routes.FsmClientController.startWebSocket(actorRef.toString()));
+				return redirect(routes.FsmClientController.createFsmClient(uuid.toString()));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

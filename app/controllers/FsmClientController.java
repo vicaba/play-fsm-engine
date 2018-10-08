@@ -1,15 +1,17 @@
 package controllers;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.stream.Materializer;
 import models.fsm_websocket.WebSocketActor;
 import play.libs.streams.ActorFlow;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.WebSocket;
-
+import views.html.*;
 import javax.inject.Inject;
-import java.io.File;
+import java.util.function.Function;
 
 public class FsmClientController extends Controller {
 	private final ActorSystem actorSystem;
@@ -21,12 +23,11 @@ public class FsmClientController extends Controller {
 		this.materializer = materializer;
 	}
 
-	public Result startWebSocket(String actorId) {
-		return ok("Para empezar el websocket");
+	public Result createFsmClient(String actorId) {
+		return ok(fsm_client_view.render(actorId));
 	}
 
-	public WebSocket createFsmClient() {
-
+	public WebSocket startWebSocket() {
 
 		return WebSocket.Text.accept(request ->
 													  ActorFlow.actorRef(WebSocketActor::props,

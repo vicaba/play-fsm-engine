@@ -9,6 +9,7 @@ import models.fsm_engine.Exceptions.OntologyNotFoundException;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.UUID;
 
 public class FsmEngineFactory {
 	private final ActorSystem actorSystem;
@@ -20,9 +21,9 @@ public class FsmEngineFactory {
 		this.httpClient = httpClient;
 	}
 
-	public ActorRef create(File file) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+	public ActorRef create(File file, UUID uuid) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		FSMEngine fsmEngine = new FSMEngine(httpClient, file);
 
-		return actorSystem.actorOf(Props.create(FSMActor.class, httpClient, fsmEngine), "FSM_Actor");
+		return actorSystem.actorOf(Props.create(FSMActor.class, httpClient, fsmEngine), FSMEngine.generateActorName(uuid));
 	}
 }

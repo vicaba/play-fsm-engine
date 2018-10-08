@@ -1,11 +1,20 @@
-var socket = new WebSocket("ws://www.example.com/socketserver");
+$(document).ready(function () {
+   var wsId = $("#ws_id").attr("value");
 
-var urlString = window.location.href;
-var url = new URL(url_string);
+   var urlString = "ws://localhost:9000/fsm_client";
 
-var actorId = url.getParameter("actorId");
+   var socket = new WebSocket(urlString);
 
+   console.log(urlString);
 
-socket.onopen = function (event) {
-  socket.send(actorId);
-};
+   socket.onopen = function (event) {
+      socket.send(wsId);
+      alert("actor id = " + wsId);
+   };
+
+   socket.onmessage = function (event) {
+      var textArea = $("#message_area");
+      textArea.text(textArea.text() + event.data);
+   };
+});
+

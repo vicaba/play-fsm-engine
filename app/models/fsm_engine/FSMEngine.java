@@ -1,7 +1,5 @@
 package models.fsm_engine;
 
-import akka.actor.ActorSystem;
-
 import models.fsm_engine.Exceptions.*;
 import models.fsm_entities.*;
 
@@ -9,21 +7,16 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RiotNotFoundException;
 import org.apache.jena.shared.Lock;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFSyntax;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -49,20 +42,6 @@ public class FSMEngine {
 
 		System.out.println(file.getName());
 
-		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-		StringBuilder out = new StringBuilder();
-		String line;
-		try {
-			while ((line = reader.readLine()) != null) {
-				out.append(line);
-			}
-		} catch (Exception e) {
-
-		}
-
-		System.out.println(out.toString());   //Prints the string content read from input stream
-
-
 		fsm = FSMQueries.readFSM(ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE"), FSM_IRI);
 		if (fsm == null) {
 			System.out.println("Can't find the Finite FSMEntities.State Machine");
@@ -85,6 +64,10 @@ public class FSMEngine {
 		useLocalModel = false;
 
 		actualState = initialState;
+	}
+
+	public State getActualState() {
+		return actualState;
 	}
 
 	public void onStateChange() {
@@ -222,6 +205,10 @@ public class FSMEngine {
 				localModel.leaveCriticalSection();
 			}
 		}
+	}
+
+	public static String generateActorName(UUID uuid) {
+		return "fsm_actor_" + uuid.toString();
 	}
 
 }
