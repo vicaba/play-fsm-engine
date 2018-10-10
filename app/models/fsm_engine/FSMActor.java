@@ -3,7 +3,7 @@ package models.fsm_engine;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import models.fsm_entities.State;
-import models.fsm_websocket.NotifyStatusChange;
+import models.fsm_websocket.NotifyStatusChangedMessage;
 
 public class FSMActor extends AbstractActor {
 	private FSMEngine fsmEngine;
@@ -16,6 +16,12 @@ public class FSMActor extends AbstractActor {
 		this.notifierActor = null;
 	}
 
+	@Override
+	public void preStart() throws Exception {
+		super.preStart();
+		//self().tell("Hola", self());
+	}
+
 	public void destroy() {
 		httpClient.stop();
 	}
@@ -24,6 +30,9 @@ public class FSMActor extends AbstractActor {
 	public Receive createReceive() {
 		return receiveBuilder()
 				.match(ChangeStateMessage.class, changeStateMsg -> {
+					System.out.println("FSM anchor = " + self().path());
+					System.out.println("sistema en fsm engine ->" + getContext().getSystem().hashCode());
+
 					//Case where we receive a Change FSMEntities.State Message
 					fsmEngine.onStateChange();
 					sendNotification("State changed -> " + fsmEngine.getActualState().getLocalName());
@@ -39,15 +48,19 @@ public class FSMActor extends AbstractActor {
 					}
 				})
 				.match(EstablishConnectionMessage.class, establishConnectionMsg -> {
+					System.out.println("Mensaje recibido en fsm");
 					notifierActor = sender();
+					sendNotification("Actual state: " + fsmEngine.getActualState().getLocalName());
 				})
-				.matchAny(o -> System.out.println("received unknown message"))
+				.matchAny(o -> {
+					System.out.println("he recibido algo " + o.toString());
+				} )
 				.build();
 	}
 
 	private void sendNotification(String message) {
 		if (notifierActor != null) {
-			notifierActor.tell(new NotifyStatusChange(message), self());
+			notifierActor.tell(new NotifyStatusChangedMessage(message), self());
 		}
 	}
 }

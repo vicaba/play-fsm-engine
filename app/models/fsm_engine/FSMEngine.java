@@ -174,6 +174,7 @@ public class FSMEngine {
 			}
 		}
 
+		//TODO: descomentar esto
 		for (Future<Boolean> f : futures) {
 			try {
 				f.get(10, TimeUnit.SECONDS);

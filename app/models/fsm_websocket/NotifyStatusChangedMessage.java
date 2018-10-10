@@ -1,9 +1,9 @@
 package models.fsm_websocket;
 
-public class NotifyStatusChange {
+public class NotifyStatusChangedMessage {
 	private String message;
 
-	public NotifyStatusChange(String message) {
+	public NotifyStatusChangedMessage(String message) {
 		this.message = message;
 	}
 
