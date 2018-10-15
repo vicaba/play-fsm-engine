@@ -5,15 +5,22 @@ import akka.actor.ActorRef;
 import models.fsm_entities.State;
 import models.fsm_websocket.NotifyStatusChangedMessage;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 public class FSMActor extends AbstractActor {
 	private FSMEngine fsmEngine;
 	private HTTPClient httpClient;
 	private ActorRef notifierActor;
 
+	private List<NotifyStatusChangedMessage> statusChangeList;
+
 	public FSMActor(HTTPClient httpClient, FSMEngine fsmEngine) {
 		this.httpClient = httpClient;
 		this.fsmEngine = fsmEngine;
 		this.notifierActor = null;
+		statusChangeList = new ArrayList<>();
 	}
 
 	@Override
@@ -30,12 +37,10 @@ public class FSMActor extends AbstractActor {
 	public Receive createReceive() {
 		return receiveBuilder()
 				.match(ChangeStateMessage.class, changeStateMsg -> {
-					System.out.println("FSM anchor = " + self().path());
-					System.out.println("sistema en fsm engine ->" + getContext().getSystem().hashCode());
 
 					//Case where we receive a Change FSMEntities.State Message
 					fsmEngine.onStateChange();
-					sendNotification("State changed -> " + fsmEngine.getActualState().getLocalName());
+					sendNotification("stateChanged", "State changed -> " + fsmEngine.getActualState().getLocalName());
 					this.self().tell(new CheckConditionsMessage(), this.self());
 				})
 				.match(CheckConditionsMessage.class, checkConditionMsg -> {
@@ -50,7 +55,7 @@ public class FSMActor extends AbstractActor {
 				.match(EstablishConnectionMessage.class, establishConnectionMsg -> {
 					System.out.println("Mensaje recibido en fsm");
 					notifierActor = sender();
-					sendNotification("Actual state: " + fsmEngine.getActualState().getLocalName());
+					sendNotification("stateChanged", "Actual state: " + fsmEngine.getActualState().getLocalName());
 				})
 				.matchAny(o -> {
 					System.out.println("he recibido algo " + o.toString());
@@ -58,9 +63,16 @@ public class FSMActor extends AbstractActor {
 				.build();
 	}
 
-	private void sendNotification(String message) {
+	private void sendNotification(String type, String message) {
 		if (notifierActor != null) {
-			notifierActor.tell(new NotifyStatusChangedMessage(message), self());
+			if (statusChangeList.size() > 0) {
+				statusChangeList.forEach(m -> notifierActor.tell(m, self()));
+				statusChangeList.clear();
+			}
+
+			notifierActor.tell(new NotifyStatusChangedMessage(type, message), self());
+		} else {
+			statusChangeList.add(new NotifyStatusChangedMessage(type, message));
 		}
 	}
 }

@@ -1,13 +1,14 @@
 package models.fsm_websocket;
 
 import akka.actor.*;
+import com.fasterxml.jackson.databind.JsonNode;
 import models.fsm_engine.EstablishConnectionMessage;
 import models.fsm_engine.FSMEngine;
+import models.info_messages.InfoMessage;
+import play.libs.Json;
 
 import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.CompletionStage;
-
 
 
 public class WebSocketActor extends AbstractActor {
@@ -24,8 +25,15 @@ public class WebSocketActor extends AbstractActor {
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
-				.match(String.class, message -> {
-					UUID uuid = UUID.fromString(message);
+				.match(JsonNode.class, message -> {
+					if (!message.has("type") || !message.findPath("type").textValue().equals("connection_request")) {
+						System.out.println(message.findPath("type").textValue());
+						System.out.println(message.toString());
+						tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message"));
+						return;
+					}
+
+					UUID uuid = UUID.fromString(message.findPath("wsId").textValue());
 
 					String actorName = "user/" + FSMEngine.generateActorName(uuid);
 					System.out.println("actor name = " + actorName);
@@ -35,17 +43,17 @@ public class WebSocketActor extends AbstractActor {
 
 					fsmActor.tell(new EstablishConnectionMessage(), self());
 
-					//ActorRef fsmActor1 = getContext().actorSelection("akka://application/user/fsm*").resolveOneCS(Duration.ofDays(1)).toCompletableFuture().join();
-					//System.out.println("fsm things = " + fsmActor1);
-
-					//ActorRef fsmActor = getContext().actorSelection(actorName).resolveOneCS(Duration.ofDays(1)).toCompletableFuture().join();
-
-					//fsmActor.tell(EstablishConnectionMessage.class, self());
 					System.out.println("despues del for");
-					out.tell("I received your message: " + message, self());
-				}).match(NotifyStatusChangedMessage.class, change -> {
-					out.tell(change.getMessage(), self());
-				}).match(ActorIdentity.class, m -> System.out.println("Actor ref ->" + m.getRef() + " y -> " + m.getActorRef().get()))
+					tellClient(new NotifyStatusChangedMessage("connected", "Connection established!"));
+				}).match(NotifyStatusChangedMessage.class, this::tellClient)
+				.matchAny(m -> {
+					System.out.println("he recibido " + m.getClass().toString());
+					tellClient(new NotifyStatusChangedMessage("bad_message", "I've recieved a bad message" + m.toString()));
+				})
 				.build();
+	}
+
+	private void tellClient(NotifyStatusChangedMessage message) {
+		out.tell(message.toJson(), self());
 	}
 }

@@ -28,8 +28,8 @@ public class FsmClientController extends Controller {
 	}
 
 	public WebSocket startWebSocket() {
-
-		return WebSocket.Text.accept(request ->
+		System.out.println("He recibido una peticion para socket");
+		return WebSocket.Json.accept(request ->
 													  ActorFlow.actorRef(WebSocketActor::props,
 																				actorSystem, materializer
 													  )

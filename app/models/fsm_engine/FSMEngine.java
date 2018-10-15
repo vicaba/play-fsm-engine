@@ -153,7 +153,7 @@ public class FSMEngine {
 	}
 
 	public void executeActions(List<Action> actions) {
-		List<Future<Boolean>> futures = new ArrayList<>();
+		/*List<Future<Boolean>> futures = new ArrayList<>();
 
 		for (Action action : actions) {
 			System.out.println("Executing action " + action.getLocalName() + " at " + action.getTargetURI());
@@ -172,6 +172,7 @@ public class FSMEngine {
 					futures.add(f);
 					break;
 			}
+			//TODO:descomentar todo esto
 		}
 
 		//TODO: descomentar esto
@@ -183,7 +184,7 @@ public class FSMEngine {
 			}
 		}
 
-		System.out.println("Continuing...");
+		System.out.println("Continuing...");*/
 	}
 
 	public void insertData(String data) throws RiotNotFoundException {
