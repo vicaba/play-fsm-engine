@@ -164,7 +164,7 @@ public class FSMQueries {
 					body = sol.getLiteral("body").getString();
 				}
 
-				int timeoutInMs = 0;
+				int timeoutInMs = 1;
 				if (sol.contains("timeoutInMs")) {
 					timeoutInMs = sol.getLiteral("timeoutInMs").getInt();
 				}

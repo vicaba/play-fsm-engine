@@ -181,8 +181,8 @@ public class FSMEngine {
 		model.enterCriticalSection(Lock.WRITE);
 		try {
 			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
-		} catch (RiotNotFoundException e){
-			System.out.println("\t\t\tBody message bad RDF Turtle format");
+		} catch (Exception e){
+			System.out.println("\tBody message bad RDF Turtle format");
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -191,8 +191,8 @@ public class FSMEngine {
 			localModel.enterCriticalSection(Lock.WRITE);
 			try {
 				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
-			} catch (RiotNotFoundException e) {
-				System.out.println("Body message bad RDF Turtle format");
+			} catch (Exception e) {
+				System.out.println("\tBody message bad RDF Turtle format");
 			} finally {
 				localModel.leaveCriticalSection();
 			}
