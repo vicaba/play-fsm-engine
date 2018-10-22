@@ -1,5 +1,7 @@
 package models.fsm_engine;
 
+import akka.util.Timeout;
+import models.Tuple2;
 import models.fsm_engine.Exceptions.*;
 import models.fsm_entities.*;
 
@@ -17,9 +19,8 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeoutException;
 
 public class FSMEngine {
@@ -29,10 +30,6 @@ public class FSMEngine {
 	private boolean useLocalModel;
 	private State actualState;
 
-	private static final String FSM_IRI = "file:///D:/projects/JenaTest/ontologies/telecontrol_FSM.owl.ttl#telecontrolFSM";
-	private static final String TC_FSM_ONT = "ontologies/telecontrol_FSM.owl.ttl";
-	private static final String TC_SYS_ONT = "ontologies/telecontrol_system.owl.ttl";
-
 	public FSMEngine(HTTPClient httpClient, File file) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		this.httpClient = httpClient;
 
@@ -40,12 +37,17 @@ public class FSMEngine {
 
 		FiniteStateMachine fsm;
 
-		System.out.println(file.getName());
+		Model userModel = ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE");
 
-		fsm = FSMQueries.readFSM(ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE"), FSM_IRI);
+		String userBaseURI = userModel.getNsPrefixURI("");
+		System.out.println(userModel.getNsPrefixMap().toString());
+
+		System.out.println("USER PREFIX ENGINGE= " + userBaseURI);
+
+		fsm = FSMQueries.readFSM(userModel, userBaseURI + "telecontrolFSM");
 		if (fsm == null) {
-			System.out.println("Can't find the Finite FSMEntities.State Machine");
-			throw new OntologyNotFoundException("The ontology " + TC_FSM_ONT + " was not found");
+			System.out.println("Can't find the Finite State Machine");
+			throw new OntologyNotFoundException("The ontology " + userBaseURI + " was not found");
 		}
 
 		initialState = fsm.getInitialState();
@@ -70,8 +72,12 @@ public class FSMEngine {
 		return actualState;
 	}
 
-	public void onStateChange() {
-		System.out.println("FSMEntities.State -> " + actualState.getLocalName());
+	public void setActualState(State actualState) {
+		this.actualState = actualState;
+	}
+
+	public void prepareNewState() {
+		System.out.println("State -> " + actualState.getLocalName());
 
 		//Check if the conditions will be checked only against data that arrive now
 		if (FSMQueries.onlyNewDataAllowed(actualState, model)) {
@@ -82,47 +88,6 @@ public class FSMEngine {
 			useLocalModel = false;
 			localModel = null;
 		}
-
-		//Get the entry actions of the actual state and execute them
-		executeActions(actualState.getEntryActions());
-
-		//Send message to checkTransition
-	}
-
-	public State checkTransitions() {
-		for (Transition transition : actualState.getTransitions()) {
-			if (evaluateTransition(transition, actualState)) {
-				//Change the next state and exit while loop
-				actualState = transition.getTargetState();
-				return transition.getTargetState();
-			}
-		}
-		return null;
-	}
-
-	private boolean evaluateTransition(Transition transition, State actualState) {
-		List<Guard> guards = transition.getGuards();
-
-		if (guards.isEmpty()) {
-			//Execute the state exit actions
-			executeActions(actualState.getExitActions());
-			return true;
-		}
-
-		for (Guard guard : guards) {
-			//TODO: ejecutar todas las acciones de todos los guards que sean ciertos y no solo del primero que se encuentre
-			if (evaluateGuard(guard)) {
-				//Execute the state exit actions
-				executeActions(actualState.getExitActions());
-
-				//Execute the guards actions
-				executeActions(guard.getActions());
-
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	private boolean evaluateGuard(Guard guard) {
@@ -152,45 +117,70 @@ public class FSMEngine {
 		return false;
 	}
 
-	public void executeActions(List<Action> actions) {
-		/*List<Future<Boolean>> futures = new ArrayList<>();
+	public Tuple2<State, List<Action>> tryTransitions() {
+		List<Action> guardActions = new ArrayList<>();
+		State nextState = null;
 
-		for (Action action : actions) {
+		for (Transition transition : actualState.getTransitions()) {
+			boolean isAnyGuardTrue = false;
+
+			List<Guard> transitionGuards = transition.getGuards();
+
+			for (Guard guard : transitionGuards) {
+				if (evaluateGuard(guard)) {
+					isAnyGuardTrue = true;
+					guardActions.addAll(guard.getActions());
+				}
+			}
+
+			if (transitionGuards.isEmpty() || isAnyGuardTrue) {
+				nextState = transition.getTargetState();
+				break;
+			}
+		}
+
+		return new Tuple2<>(nextState, guardActions);
+	}
+
+	public CompletableFuture<Void> executeActions(List<Action> actions) {
+		List<CompletableFuture> futures = new ArrayList<>();
+
+		actions.forEach(action -> {
+			CompletionStage stage;
 			System.out.println("Executing action " + action.getLocalName() + " at " + action.getTargetURI());
 
 			switch (action.getMethod()) {
+				case "GET":
+					stage = httpClient.getRequest(action.getTargetURI(), this::onActionResponse, action.getTimeoutInMsec());
+					break;
 				case "POST":
-					Future<Boolean> f = httpClient.postRequest(action.getTargetURI(), (status, body) -> {
-						System.out.println("\t\tStatus: " + status);
-						System.out.println("\t\tBody: " + body);
-						try {
-							insertData(body);
-						} catch (Exception e) {
-							System.out.println("Bad RDF read");
-						}
-					});
-					futures.add(f);
+					stage = httpClient.postRequest(action.getTargetURI(), action.getBody(), this::onActionResponse, action.getTimeoutInMsec());
+					break;
+				default:
+					stage = CompletableFuture.completedStage(true);
 					break;
 			}
-			//TODO:descomentar todo esto
-		}
 
-		//TODO: descomentar esto
-		for (Future<Boolean> f : futures) {
-			try {
-				f.get(10, TimeUnit.SECONDS);
-			} catch (InterruptedException | ExecutionException | TimeoutException e) {
-				e.printStackTrace();
-			}
-		}
+			futures.add(stage.toCompletableFuture());
+		});
 
-		System.out.println("Continuing...");*/
+		CompletableFuture[] futuresArray = new CompletableFuture[futures.size()];
+		futures.toArray(futuresArray);
+
+		return CompletableFuture.allOf(futuresArray);
 	}
 
-	public void insertData(String data) throws RiotNotFoundException {
+	private void onActionResponse(int status, String body) {
+		System.out.println("\t\tStatus: " + status);
+		System.out.println("\t\tBody: " + body);
+
+		insertData(body);
+	}
+
+	public void insertData(String data) {
 		model.enterCriticalSection(Lock.WRITE);
 		try {
-			RDFDataMgr.read(model, new StringReader(data), FSMQueries.BASE, Lang.TTL);
+			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
 		} catch (RiotNotFoundException e){
 			System.out.println("\t\t\tBody message bad RDF Turtle format");
 		} finally {
@@ -200,7 +190,7 @@ public class FSMEngine {
 		if (localModel != null) {
 			localModel.enterCriticalSection(Lock.WRITE);
 			try {
-				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.BASE, Lang.TTL);
+				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
 			} catch (RiotNotFoundException e) {
 				System.out.println("Body message bad RDF Turtle format");
 			} finally {

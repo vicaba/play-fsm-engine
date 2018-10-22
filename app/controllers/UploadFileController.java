@@ -1,8 +1,7 @@
 package controllers;
 
 import akka.actor.ActorRef;
-import models.fsm_engine.ChangeStateMessage;
-import models.fsm_engine.FSMEngine;
+import models.fsm_engine.OnStateChangeMessage;
 import models.fsm_engine.FsmEngineFactory;
 import play.mvc.*;
 
@@ -32,7 +31,7 @@ public class UploadFileController extends Controller {
 				ActorRef actorRef = fsmEngineFactory.create(file, uuid);
 
 				actorRef.path();
-				actorRef.tell(new ChangeStateMessage(), ActorRef.noSender());
+				actorRef.tell(new OnStateChangeMessage(), ActorRef.noSender());
 
 				return redirect(routes.FsmClientController.createFsmClient(uuid.toString()));
 			} catch (Exception e) {

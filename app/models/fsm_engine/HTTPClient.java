@@ -1,10 +1,11 @@
 package models.fsm_engine;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 
 
 public interface HTTPClient {
-	Future<Boolean> postRequest(String URI, BiConsumer<Integer, String> action);
+	CompletionStage<Boolean> getRequest(String url, BiConsumer<Integer, String> action, int timeoutInMs);
+	CompletionStage<Boolean> postRequest(String url, String bodyToSend, BiConsumer<Integer, String> action, int timeoutInMs);
 	void stop();
 }

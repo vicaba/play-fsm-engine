@@ -13,6 +13,5 @@ public class Main {
 
 		actor1.tell("hola", actor1);
 		System.out.println("Message told to actor_1");
-
 	}
 }

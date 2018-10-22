@@ -21,36 +21,41 @@ $(document).ready(function () {
    };
 
    socket.onmessage = function (event) {
-      var textArea = $("#message_area");
       var msg = JSON.parse(event.data);
       console.log("Json received " + event.data);
       var color;
 
-      switch (msg.type)
-      {
+      switch (msg.type) {
          case "connected":
             color = "blue";
             break;
          case "stateChanged":
             color = "green";
             break;
+         case "otherInfo":
+            color = "brown";
+            break;
          default:
             color = "black";
       }
 
-      var message = "<p style=\"color:" + color + "\">" + msg.message + "</p>";
-
-      var feedContent = $("#feed_content");
-
-      var newFeed = "<div class=\"media\">" +
-                        "<div class=\"media-body\">" +
-                           "<h4 class=\"media-heading\"> </h4>" +
-                           "<p>" + message + "</p>" +
-                        "</div>" +
-                     "</div>"
-      ;
-
-      feedContent.append(newFeed);
+      writeMessage(msg.message, color);
    };
 });
+
+function writeMessage(text, color) {
+   var message = "<p style=\"color:" + color + "\">" + text + "</p>";
+
+   var feedContent = $("#feed_content");
+
+   var newFeed = "<div class=\"media\">" +
+         "<div class=\"media-body\">" +
+         "<h4 class=\"media-heading\"> </h4>" +
+         "<p>" + message + "</p>" +
+         "</div>" +
+         "</div>"
+   ;
+
+   feedContent.append(newFeed);
+}
 

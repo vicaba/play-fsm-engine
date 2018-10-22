@@ -27,8 +27,6 @@ public class WebSocketActor extends AbstractActor {
 		return receiveBuilder()
 				.match(JsonNode.class, message -> {
 					if (!message.has("type") || !message.findPath("type").textValue().equals("connection_request")) {
-						System.out.println(message.findPath("type").textValue());
-						System.out.println(message.toString());
 						tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message"));
 						return;
 					}
@@ -36,16 +34,12 @@ public class WebSocketActor extends AbstractActor {
 					UUID uuid = UUID.fromString(message.findPath("wsId").textValue());
 
 					String actorName = "user/" + FSMEngine.generateActorName(uuid);
-					System.out.println("actor name = " + actorName);
 
 					ActorRef fsmActor = getContext().getSystem().actorSelection(actorName).resolveOneCS(Duration.ofDays(1)).toCompletableFuture().join();
-					System.out.println("sistema en websocket ->" + getContext().getSystem().hashCode());
 
 					fsmActor.tell(new EstablishConnectionMessage(), self());
-
-					System.out.println("despues del for");
-					tellClient(new NotifyStatusChangedMessage("connected", "Connection established!"));
-				}).match(NotifyStatusChangedMessage.class, this::tellClient)
+				})
+				.match(NotifyStatusChangedMessage.class, this::tellClient)
 				.matchAny(m -> {
 					System.out.println("he recibido " + m.getClass().toString());
 					tellClient(new NotifyStatusChangedMessage("bad_message", "I've recieved a bad message" + m.toString()));
