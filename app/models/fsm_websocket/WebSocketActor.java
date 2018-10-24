@@ -4,8 +4,6 @@ import akka.actor.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import models.fsm_engine.EstablishConnectionMessage;
 import models.fsm_engine.FSMEngine;
-import models.info_messages.InfoMessage;
-import play.libs.Json;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -25,6 +23,8 @@ public class WebSocketActor extends AbstractActor {
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
+
+
 				.match(JsonNode.class, message -> {
 					if (!message.has("type") || !message.findPath("type").textValue().equals("connection_request")) {
 						tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message"));
@@ -39,11 +39,17 @@ public class WebSocketActor extends AbstractActor {
 
 					fsmActor.tell(new EstablishConnectionMessage(), self());
 				})
+
+
 				.match(NotifyStatusChangedMessage.class, this::tellClient)
+
+
 				.matchAny(m -> {
 					System.out.println("he recibido " + m.getClass().toString());
 					tellClient(new NotifyStatusChangedMessage("bad_message", "I've recieved a bad message" + m.toString()));
 				})
+
+
 				.build();
 	}
 

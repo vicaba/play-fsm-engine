@@ -10,11 +10,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 
 @Singleton
 public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritables {
@@ -25,13 +22,14 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 		this.wsClient = wsClient;
 	}
 
-	public void stop() {
+
+	/*public void stop() {
 		try {
 			wsClient.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
+	}*/
 
 	public CompletionStage<Boolean> getRequest(String url, BiConsumer<Integer, String> postAction, int timeoutInMs) {
 		return doRequest("GET", url, postAction, null, timeoutInMs);

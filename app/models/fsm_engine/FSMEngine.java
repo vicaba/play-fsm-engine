@@ -1,6 +1,5 @@
 package models.fsm_engine;
 
-import akka.util.Timeout;
 import models.Tuple2;
 import models.fsm_engine.Exceptions.*;
 import models.fsm_entities.*;
@@ -9,7 +8,6 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RiotNotFoundException;
 import org.apache.jena.shared.Lock;
 
 import java.io.File;
@@ -21,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeoutException;
 
 public class FSMEngine {
 	private HTTPClient httpClient;
@@ -90,33 +87,6 @@ public class FSMEngine {
 		}
 	}
 
-	private boolean evaluateGuard(Guard guard) {
-		List<Condition> conditions = guard.getConditions();
-
-		if (conditions.isEmpty()) {
-			return true;
-		}
-
-		for (Condition condition : conditions) {
-			Model modelToUse;
-			if (useLocalModel) {
-				modelToUse = localModel;
-			} else {
-				modelToUse = model;
-			}
-
-			model.enterCriticalSection(Lock.READ);
-			boolean isConditionTrue = FSMQueries.evaluateCondition(modelToUse, condition);
-			model.leaveCriticalSection();
-
-			if (isConditionTrue) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	public Tuple2<State, List<Action>> tryTransitions() {
 		List<Action> guardActions = new ArrayList<>();
 		State nextState = null;
@@ -151,10 +121,10 @@ public class FSMEngine {
 
 			switch (action.getMethod()) {
 				case "GET":
-					stage = httpClient.getRequest(action.getTargetURI(), this::onActionResponse, action.getTimeoutInMsec());
+					stage = httpClient.getRequest(action.getTargetURI(), this::onActionResponse, action.getTimeoutInMs());
 					break;
 				case "POST":
-					stage = httpClient.postRequest(action.getTargetURI(), action.getBody(), this::onActionResponse, action.getTimeoutInMsec());
+					stage = httpClient.postRequest(action.getTargetURI(), action.getBody(), this::onActionResponse, action.getTimeoutInMs());
 					break;
 				default:
 					stage = CompletableFuture.completedStage(true);
@@ -170,6 +140,37 @@ public class FSMEngine {
 		return CompletableFuture.allOf(futuresArray);
 	}
 
+	public static String generateActorName(UUID uuid) {
+		return "fsm_actor_" + uuid.toString();
+	}
+
+	private boolean evaluateGuard(Guard guard) {
+		List<Condition> conditions = guard.getConditions();
+
+		if (conditions.isEmpty()) {
+			return true;
+		}
+
+		for (Condition condition : conditions) {
+			Model modelToUse;
+			if (useLocalModel) {
+				modelToUse = localModel;
+			} else {
+				modelToUse = model;
+			}
+
+			model.enterCriticalSection(Lock.READ);
+			boolean isConditionTrue = FSMQueries.evaluateCondition(modelToUse, condition);
+			model.leaveCriticalSection();
+
+			if (isConditionTrue) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private void onActionResponse(int status, String body) {
 		System.out.println("\t\tStatus: " + status);
 		System.out.println("\t\tBody: " + body);
@@ -177,11 +178,11 @@ public class FSMEngine {
 		insertData(body);
 	}
 
-	public void insertData(String data) {
+	private void insertData(String data) {
 		model.enterCriticalSection(Lock.WRITE);
 		try {
 			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
-		} catch (Exception e){
+		} catch (Exception e) {
 			System.out.println("\tBody message bad RDF Turtle format");
 		} finally {
 			model.leaveCriticalSection();
@@ -198,9 +199,4 @@ public class FSMEngine {
 			}
 		}
 	}
-
-	public static String generateActorName(UUID uuid) {
-		return "fsm_actor_" + uuid.toString();
-	}
-
 }

@@ -4,14 +4,14 @@ public class Action extends Individual {
 	private String targetURI;
 	private String method;
 	private String body;
-	private int timeoutInMsec;
+	private int timeoutInMs;
 
-	public Action(String URI, String localName, String targetURI, String method, String body, int timeoutInMsec) {
+	public Action(String URI, String localName, String targetURI, String method, String body, int timeoutInMs) {
 		super(URI, localName);
 		this.targetURI = targetURI;
 		this.method = method;
 		this.body = body;
-		this.timeoutInMsec = timeoutInMsec;
+		this.timeoutInMs = timeoutInMs;
 	}
 
 	public String getTargetURI() {
@@ -26,7 +26,7 @@ public class Action extends Individual {
 		return body;
 	}
 
-	public int getTimeoutInMsec() {
-		return timeoutInMsec;
+	public int getTimeoutInMs() {
+		return timeoutInMs;
 	}
 }

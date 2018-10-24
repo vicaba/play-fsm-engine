@@ -3,21 +3,20 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index()
+GET         /                           controllers.HomeController.index()
+
 
 # Upload a file
-POST     /upload                    controllers.UploadFileController.upload()
+POST        /upload                     controllers.UploadFileController.upload()
+
 
 # Getting a new client
-GET     /fsm_client/:actorId       controllers.FsmClientController.createFsmClient(actorId: String)
+GET         /fsm_client/:actorId        controllers.FsmClientController.createFsmClient(actorId: String)
 
-GET     /fsm_client                controllers.FsmClientController.startWebSocket()
+GET         /fsm_client                 controllers.FsmClientController.startWebSocket()
 
-
-# An example controller showing how to use dependency injection
-GET     /count                      controllers.CountController.count()
-# An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message()
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET         /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+

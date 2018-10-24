@@ -9,26 +9,25 @@ import models.fsm_websocket.NotifyStatusChangedMessage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 public class FSMActor extends AbstractActor {
 	private FSMEngine fsmEngine;
-	private HTTPClient httpClient;
 	private ActorRef notifierActor;
 
 	private List<NotifyStatusChangedMessage> statusChangeList;
 
-	public FSMActor(HTTPClient httpClient, FSMEngine fsmEngine) {
-		this.httpClient = httpClient;
+	public FSMActor(FSMEngine fsmEngine) {
 		this.fsmEngine = fsmEngine;
 		this.notifierActor = null;
 		statusChangeList = new ArrayList<>();
 	}
 
+	/*
+	//TODO: implement destroy to stop an FSM_Actor
 	public void destroy() {
 		httpClient.stop();
 	}
+	*/
 
 	@Override
 	public Receive createReceive() {
@@ -55,6 +54,7 @@ public class FSMActor extends AbstractActor {
 					});
 				})
 
+
 				.match(TryTransitionsMessage.class, checkConditionMsg -> {
 					//Case where we receive a Check FSMEntities.Condition Message
 
@@ -71,7 +71,6 @@ public class FSMActor extends AbstractActor {
 
 					sendNotification("otherInfo", "A transition is feasible");
 
-
 					List<Action> exitActions = fsmEngine.getActualState().getExitActions();
 					if (exitActions.isEmpty()) {
 						sendNotification("otherInfo", "There aren't any exit actions");
@@ -80,22 +79,22 @@ public class FSMActor extends AbstractActor {
 					}
 
 					fsmEngine.executeActions(exitActions)
-							.thenCompose(f -> {
+								.thenCompose(f -> {
 
-								if (transitionActions.isEmpty()) {
-									sendNotification("otherInfo", "There aren't any transition actions");
-								} else {
-									sendNotification("otherInfo", "Executing feasible guard's actions of the transition");
-								}
+									if (transitionActions.isEmpty()) {
+										sendNotification("otherInfo", "There aren't any transition actions");
+									} else {
+										sendNotification("otherInfo", "Executing feasible guard's actions of the transition");
+									}
 
-								return fsmEngine.executeActions(transitionActions);
+									return fsmEngine.executeActions(transitionActions);
 
-							})
-							.thenAccept(f -> {
-								sendNotification("otherInfo", "Changing state...");
-								fsmEngine.setActualState(nextState);
-								this.self().tell(new OnStateChangeMessage(), this.self());
-							});
+								})
+								.thenAccept(f -> {
+									sendNotification("otherInfo", "Changing state...");
+									fsmEngine.setActualState(nextState);
+									this.self().tell(new OnStateChangeMessage(), this.self());
+								});
 				})
 
 

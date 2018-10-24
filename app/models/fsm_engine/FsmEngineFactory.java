@@ -24,6 +24,6 @@ public class FsmEngineFactory {
 	public ActorRef create(File file, UUID uuid) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		FSMEngine fsmEngine = new FSMEngine(httpClient, file);
 
-		return actorSystem.actorOf(Props.create(FSMActor.class, httpClient, fsmEngine), FSMEngine.generateActorName(uuid));
+		return actorSystem.actorOf(Props.create(FSMActor.class, fsmEngine), FSMEngine.generateActorName(uuid));
 	}
 }
