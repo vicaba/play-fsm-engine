@@ -4,6 +4,8 @@ import play.mvc.*;
 
 import views.html.*;
 
+import java.util.UUID;
+
 
 /**
  * This controller contains an action to handle HTTP requests
@@ -19,8 +21,9 @@ public class HomeController extends Controller {
 	 */
 	public Result index() {
 
+		final var uuid = UUID.randomUUID();
 
-		return ok(index.render());
+		return ok(index.render(uuid.toString()));
 	}
 
 }
