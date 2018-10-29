@@ -2,8 +2,8 @@ import com.google.inject.AbstractModule;
 
 import java.time.Clock;
 
-import models.fsm_engine.HTTPClient;
-import models.fsm_engine.PlayHTTPClient;
+import domain.http.HTTPClient;
+import infrastructure.http.PlayHTTPClient;
 
 /**
  * This class is a Guice module that tells Guice how to bind several
