@@ -34,7 +34,7 @@ public class FSMEngine {
 	private State actualState;
 	private String userBaseURI;
 
-	public FSMEngine(HTTPClient httpClient, File file) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+	public FSMEngine(File file, String fsmIri, HTTPClient httpClient) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		this.httpClient = httpClient;
 
 		State initialState;
@@ -44,11 +44,8 @@ public class FSMEngine {
 		Model userModel = ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE");
 
 		userBaseURI = userModel.getNsPrefixURI("");
-		System.out.println(userModel.getNsPrefixMap().toString());
 
-		System.out.println("USER PREFIX ENGINGE= " + userBaseURI);
-
-		fsm = FSMQueries.readFSM(userModel, userBaseURI + "telecontrolFSM");
+		fsm = FSMQueries.readFSM(userModel, fsmIri);
 		if (fsm == null) {
 			System.out.println("Can't find the Finite State Machine");
 			throw new OntologyNotFoundException("The ontology " + userBaseURI + " was not found");

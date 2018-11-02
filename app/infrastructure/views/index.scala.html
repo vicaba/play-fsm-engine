@@ -6,20 +6,31 @@
 
 @(actorId: String)
 
-@main("Welcome to FSM Engine") {
+@scripts = {
+   <script src="@routes.Assets.versioned("javascripts/index.js")" type="text/javascript"></script>
+}
+
+@main("Welcome to FSM Engine", scripts) {
    <h2>Upload your FSM ontology</h2>
 
-   @helper.form(action = helper.CSRF(infrastructure.controllers.routes.UploadFileController.upload()), 'enctype -> "multipart/form-data", 'value -> "hola") {
+   <label for="clip_id">Your id will be:</label>
+   <input id="clip_id" type="text" value="@actorId" readonly/>
 
-      <input type="file" name="ontology">
+   <button class="btn btn-secondary" onclick="copyToClipboard()">Copy to clipboard</button>
 
-      <input type="hidden" name="ws_id" value="@actorId"/>
+   @helper.form(action = helper.CSRF(infrastructure.controllers.routes.UploadFileController.upload()), 'enctype -> "multipart/form-data") {
+      <input type="hidden" name="fsm_id" id="fsm_id" value="@actorId"/>
 
-      <p>
-         <input type="submit" value="Upload">
-      </p>
+      <div class="form-group">
+         <label for="ontology">Select the ontology file where the FSM is described</label>
+         <input class="form-control" type="file" name="ontology" id="ontology">
+      </div>
 
+      <div class="form-group">
+         <label for="fsm_iri">Enter the IRI of the FSM on the ontology to run:</label>
+         <input class="form-control-file" type="text" name="fsm_iri" id="fsm_iri"/>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Upload</button>
    }
-
-   <p>Your id will be: @actorId</p>
 }

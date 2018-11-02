@@ -30,8 +30,6 @@ class FSMQueries {
 
 		Resource fsmRes = getFSM(model, machineIRI);
 
-		System.out.println("PREFIX = " + getOntologyBaseURI(model));
-
 		if (fsmRes == null) {
 			return null;
 		}

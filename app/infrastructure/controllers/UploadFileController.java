@@ -4,6 +4,8 @@ import akka.actor.ActorRef;
 import controllers.routes;
 import domain.fsm.engine.OnStateChangeMessage;
 import domain.fsm.engine.FsmEngineFactory;
+import domain.fsm.engine.exceptions.InitialStateNotFoundException;
+import domain.fsm.engine.exceptions.OntologyNotFoundException;
 import play.data.DynamicForm;
 import play.data.FormFactory;
 import play.mvc.*;
@@ -32,16 +34,23 @@ public class UploadFileController extends Controller {
 
 			try {
 				DynamicForm requestData = formFactory.form().bindFromRequest();
-				String uuidString = requestData.get("ws_id");
+				String uuidString = requestData.get("fsm_id");
+				String fsmIri = requestData.get("fsm_iri");
 
 				UUID uuid = UUID.fromString(uuidString);
 
-				ActorRef actorRef = fsmEngineFactory.create(file, uuid);
+				try {
+					ActorRef actorRef = fsmEngineFactory.create(file, fsmIri, uuid);
 
-				actorRef.path();
-				actorRef.tell(new OnStateChangeMessage(), ActorRef.noSender());
+					actorRef.path();
+					actorRef.tell(new OnStateChangeMessage(), ActorRef.noSender());
 
-				return redirect(infrastructure.controllers.routes.FsmClientController.createFsmClient(uuid.toString()));
+					return redirect(infrastructure.controllers.routes.FsmClientController.createFsmClient(uuid.toString()));
+				} catch (OntologyNotFoundException e) {
+					return badRequest("FSM not found, the FSM IRI must be fully specified");
+				} catch (InitialStateNotFoundException e) {
+					return badRequest("Initial state not found");
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
