@@ -1,6 +1,7 @@
 package infrastructure.fsm;
 
 import akka.actor.*;
+import application.fsm.FSMActor;
 import application.fsm.NotifyStatusChangedMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import domain.fsm.engine.EstablishConnectionMessage;
@@ -32,11 +33,9 @@ public class WebSocketActor extends AbstractActor {
 						return;
 					}
 
-					UUID uuid = UUID.fromString(message.findPath("wsId").textValue());
+					String actorId = message.findPath("wsId").textValue();
 
-					String actorName = "user/" + FSMEngine.generateActorName(uuid);
-
-					ActorRef fsmActor = getContext().getSystem().actorSelection(actorName).resolveOneCS(Duration.ofDays(1)).toCompletableFuture().join();
+					ActorRef fsmActor = FSMActor.findActorById(getContext().getSystem(), actorId);
 
 					fsmActor.tell(new EstablishConnectionMessage(), self());
 				})

@@ -14,9 +14,11 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.update.UpdateAction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 class FSMQueries {
 	private static final String FSM_PREFIX = "file:///D:/projects/ontologies/fsm/fsm.owl#";
@@ -114,6 +116,29 @@ class FSMQueries {
 		}
 
 		return only;
+	}
+
+	static void executeOperation(Model model, String operation) {
+			UpdateAction.parseExecute(operation, model);
+	}
+
+	static String getData(Model model, String queryString) {
+		Query query = QueryFactory.create(queryString);
+		StringBuilder sb = new StringBuilder();
+
+		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+			ResultSet resultSet = qe.execSelect();
+
+			while (resultSet.hasNext()) {
+				var qs = resultSet.next();
+
+				qs.varNames().forEachRemaining(key -> sb.append(qs.get(key).toString()).append(" "));
+
+				sb.append(System.lineSeparator());
+			}
+		}
+
+		return sb.toString();
 	}
 
 	private static State findStateByURI(List<State> states, String URI) {

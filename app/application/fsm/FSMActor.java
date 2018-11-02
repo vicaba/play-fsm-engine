@@ -2,6 +2,7 @@ package application.fsm;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
 import domain.fsm.engine.EstablishConnectionMessage;
 import domain.fsm.engine.FSMEngine;
 import domain.fsm.engine.OnStateChangeMessage;
@@ -10,8 +11,10 @@ import domain.Tuple2;
 import domain.fsm.entities.Action;
 import domain.fsm.entities.State;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class FSMActor extends AbstractActor {
 	private FSMEngine fsmEngine;
@@ -37,7 +40,7 @@ public class FSMActor extends AbstractActor {
 		return receiveBuilder()
 
 
-				.match(OnStateChangeMessage.class, changeStateMsg -> {
+				.match(OnStateChangeMessage.class, onStateChangeMessage -> {
 					//Case where we receive a Change FSMEntities.State Message
 
 					sendNotification("stateChanged", "New state: " + fsmEngine.getActualState().getLocalName());
@@ -58,7 +61,7 @@ public class FSMActor extends AbstractActor {
 				})
 
 
-				.match(TryTransitionsMessage.class, checkConditionMsg -> {
+				.match(TryTransitionsMessage.class, tryTransitionsMessage -> {
 					//Case where we receive a Check FSMEntities.Condition Message
 
 					sendNotification("otherInfo", "Trying transitions...");
@@ -101,7 +104,35 @@ public class FSMActor extends AbstractActor {
 				})
 
 
-				.match(EstablishConnectionMessage.class, establishConnectionMsg -> {
+				.match(SendDataMessage.class, sendDataMessage -> {
+					printMessage("Received some data " + sendDataMessage.getData());
+
+					fsmEngine.insertData(sendDataMessage.getData());
+
+					sendNotification("otherInfo", "I have received some data");
+				})
+
+
+				.match(GetDataMessage.class, getDataMessage -> {
+					printMessage("Received a query " + getDataMessage.getQuery());
+
+					var result = fsmEngine.getData(getDataMessage.getQuery());
+
+					sender().tell(result, self());
+
+					sendNotification("otherInfo", "I have received some data");
+				})
+
+				.match(ExecuteOperationMessage.class, executeOperationMessage -> {
+					printMessage("Received a query " + executeOperationMessage.getOperation());
+
+					fsmEngine.executeOperation(executeOperationMessage.getOperation());
+
+					sendNotification("otherInfo", "I have received some data");
+				})
+
+
+				.match(EstablishConnectionMessage.class, establishConnectionMessage -> {
 					printMessage("Connection made with a WebSocketActor");
 
 					notifierActor = sender();
@@ -139,5 +170,13 @@ public class FSMActor extends AbstractActor {
 	private void printMessage(String message) {
 		//System.out.println("[" + self().path().name() + "] " + message);
 		System.out.println("Actor: " + message);
+	}
+
+	public static ActorRef findActorById(ActorSystem system, String actorId) {
+		UUID uuid = UUID.fromString(actorId);
+
+		String actorName = "user/" + FSMEngine.generateActorName(uuid);
+
+		return system.actorSelection(actorName).resolveOneCS(Duration.ofDays(1)).toCompletableFuture().join();
 	}
 }

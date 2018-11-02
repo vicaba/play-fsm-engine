@@ -32,6 +32,7 @@ public class FSMEngine {
 	private Model model, localModel;
 	private boolean useLocalModel;
 	private State actualState;
+	private String userBaseURI;
 
 	public FSMEngine(HTTPClient httpClient, File file) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		this.httpClient = httpClient;
@@ -42,7 +43,7 @@ public class FSMEngine {
 
 		Model userModel = ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE");
 
-		String userBaseURI = userModel.getNsPrefixURI("");
+		userBaseURI = userModel.getNsPrefixURI("");
 		System.out.println(userModel.getNsPrefixMap().toString());
 
 		System.out.println("USER PREFIX ENGINGE= " + userBaseURI);
@@ -146,6 +147,71 @@ public class FSMEngine {
 		return CompletableFuture.allOf(futuresArray);
 	}
 
+	public void insertData(String data) {
+		data = "@prefix : <" + userBaseURI + ">	. " + data;
+
+		model.enterCriticalSection(Lock.WRITE);
+		try {
+			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
+		} catch (Exception e) {
+			System.out.println("\tBody message bad RDF Turtle format");
+		} finally {
+			model.leaveCriticalSection();
+		}
+
+		if (localModel != null) {
+			localModel.enterCriticalSection(Lock.WRITE);
+			try {
+				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
+			} catch (Exception e) {
+				System.out.println("\tBody message bad RDF Turtle format");
+			} finally {
+				localModel.leaveCriticalSection();
+			}
+		}
+	}
+
+	public String getData(String query) {
+		var result = "";
+
+		query = "PREFIX : <" + userBaseURI + ">	" + query;
+
+		model.enterCriticalSection(Lock.READ);
+		try {
+			result = FSMQueries.getData(model, query);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			model.leaveCriticalSection();
+		}
+
+		return result;
+	}
+
+	public void executeOperation(String operation) {
+		operation = "PREFIX : <" + userBaseURI + ">	" + operation;
+
+		model.enterCriticalSection(Lock.WRITE);
+		try {
+			FSMQueries.executeOperation(model, operation);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			model.leaveCriticalSection();
+		}
+
+		if (localModel != null) {
+			localModel.enterCriticalSection(Lock.READ);
+			try {
+				FSMQueries.executeOperation(localModel, operation);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				localModel.leaveCriticalSection();
+			}
+		}
+	}
+
 	public static String generateActorName(UUID uuid) {
 		return "fsm_actor_" + uuid.toString();
 	}
@@ -182,27 +248,5 @@ public class FSMEngine {
 		System.out.println("\t\tBody: " + body);
 
 		insertData(body);
-	}
-
-	private void insertData(String data) {
-		model.enterCriticalSection(Lock.WRITE);
-		try {
-			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
-		} catch (Exception e) {
-			System.out.println("\tBody message bad RDF Turtle format");
-		} finally {
-			model.leaveCriticalSection();
-		}
-
-		if (localModel != null) {
-			localModel.enterCriticalSection(Lock.WRITE);
-			try {
-				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
-			} catch (Exception e) {
-				System.out.println("\tBody message bad RDF Turtle format");
-			} finally {
-				localModel.leaveCriticalSection();
-			}
-		}
 	}
 }

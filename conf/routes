@@ -3,20 +3,27 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET         /                           infrastructure.controllers.HomeController.index()
+GET         /                             infrastructure.controllers.HomeController.index()
 
 
 # Upload a file
-POST        /upload                     infrastructure.controllers.UploadFileController.upload()
+POST        /upload                       infrastructure.controllers.UploadFileController.upload()
 
 
 # Getting a new client
-GET         /fsm_client/:actorId        infrastructure.controllers.FsmClientController.createFsmClient(actorId: String)
+GET         /fsm_client/:actorId          infrastructure.controllers.FsmClientController.createFsmClient(actorId: String)
 
-GET         /fsm_client                 infrastructure.controllers.FsmClientController.startWebSocket()
+GET         /fsm_client                   infrastructure.controllers.FsmClientController.startWebSocket()
+
+# Sending messages to FSM clients
+POST        /:actorId/send_data           infrastructure.controllers.SendDataController.index(actorId: String)
+
+GET        /:actorId/get_data   infrastructure.controllers.GetDataController.index(actorId: String)
+
+POST        /:actorId/execute_operation   infrastructure.controllers.ExecuteOperationController.index(actorId: String)
 
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET         /assets/*file                 controllers.Assets.versioned(path="/public", file: Asset)
 
 
