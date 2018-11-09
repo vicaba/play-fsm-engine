@@ -18,17 +18,16 @@ import org.apache.jena.update.UpdateAction;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 class FSMQueries {
 	private static final String FSM_PREFIX = "file:///D:/projects/ontologies/fsm/fsm.owl#";
 	private static final String HTTP_PREFIX = "http://www.w3.org/2011/http#";
 
-	static FiniteStateMachine readFSM(Model model, String machineIRI) {
+	static FiniteStateMachine readFSM(Model model, String serverBaseUri, String userFsmBaseUri, String userFsmUri) {
 		List<State> states = new ArrayList<>();
 		State initialState = null;
 
-		Resource fsmRes = getFSM(model, machineIRI);
+		Resource fsmRes = getFSM(model, userFsmBaseUri, userFsmUri);
 
 		if (fsmRes == null) {
 			return null;
@@ -37,17 +36,17 @@ class FSMQueries {
 		String fsmLocalName = fsmRes.getLocalName();
 		System.out.println(fsmLocalName);
 
-		List<Resource> statesRes = getAllStatesResource(model, machineIRI);
+		List<Resource> statesRes = getAllStatesResource(model, userFsmBaseUri, userFsmUri);
 		for (Resource stateRes : statesRes) {
 			String stateURI = stateRes.getURI();
 			String stateLocalName = stateRes.getLocalName();
-			List<Action> entryActions = getActions(model, stateRes, "entry");
-			List<Action> exitActions = getActions(model, stateRes, "exit");
+			List<Action> entryActions = getActions(model, stateRes, "entry", userFsmBaseUri);
+			List<Action> exitActions = getActions(model, stateRes, "exit", userFsmBaseUri);
 			states.add(new State(stateURI, stateLocalName, entryActions, exitActions, new ArrayList<>()));
 		}
 
 		for (State sourceState : states) {
-			List<QuerySolution> transitionsSol = getTransitionsRes(model, sourceState);
+			List<QuerySolution> transitionsSol = getTransitionsRes(model, sourceState, userFsmBaseUri);
 			for (QuerySolution sol : transitionsSol) {
 				Resource transitionRes = sol.getResource("transition");
 				String transitionURI = transitionRes.getURI();
@@ -56,22 +55,18 @@ class FSMQueries {
 				Resource targetStateRes = sol.getResource("targetState");
 				State targetState = findStateByURI(states, targetStateRes.getURI());
 
-				List<Guard> guards = getTransitionGuards(model, transitionRes);
+				List<Guard> guards = getTransitionGuards(model, transitionRes, serverBaseUri, userFsmBaseUri);
 
 				sourceState.getTransitions().add(new Transition(transitionURI, transitionLocalName, sourceState, targetState, guards));
 			}
 		}
 
-		Resource initialStateRes = getInitialState(model);
+		Resource initialStateRes = getInitialState(model, userFsmUri);
 		if (initialStateRes != null) {
 			initialState = findStateByURI(states, initialStateRes.getURI());
 		}
 
-		return new FiniteStateMachine(machineIRI, fsmLocalName, states, initialState);
-	}
-
-	static String getOntologyBaseURI(Model model) {
-		return model.getNsPrefixURI(":");
+		return new FiniteStateMachine(userFsmUri, fsmLocalName, states, initialState);
 	}
 
 	static boolean evaluateCondition(Model model, Condition condition) {
@@ -92,16 +87,14 @@ class FSMQueries {
 		return result;
 	}
 
-	static boolean onlyNewDataAllowed(State state, Model model) {
+	static boolean onlyNewDataAllowed(State state, Model model, String userFsmBaseUri) {
 		boolean only = false;
-
-		String prefix = getOntologyBaseURI(model);
 
 		String stateIRI = getFormattedIRI(state.getURI());
 
 		String queryString =
 				"		  prefix fsm: <" + FSM_PREFIX + "> " +
-						" prefix : <" + prefix + "> " +
+						" prefix : <" + userFsmBaseUri + "> " +
 						" ASK { " +
 						stateIRI + " fsm:onlyNewData	 ?only . " +
 						" 	FILTER (?only = true) . " +
@@ -117,7 +110,7 @@ class FSMQueries {
 	}
 
 	static void executeOperation(Model model, String operation) {
-			UpdateAction.parseExecute(operation, model);
+		UpdateAction.parseExecute(operation, model);
 	}
 
 	static String getData(Model model, String queryString) {
@@ -149,18 +142,16 @@ class FSMQueries {
 		return null;
 	}
 
-	private static Resource getFSM(Model model, String fsmIRI) {
+	private static Resource getFSM(Model model, String userFsmBaseUri, String userFsmUri) {
 		Resource fsm = null;
-
-		String prefix = getOntologyBaseURI(model);
 
 		String queryString =
 				"		 prefix fsm: <" + FSM_PREFIX + ">  \n" +
-						"prefix : <" + prefix + "> \n" +
+						"prefix : <" + userFsmBaseUri + "> \n" +
 						"SELECT ?fsm \n" +
 						"WHERE { \n" +
 						"	?fsm a fsm:StateMachine . " +
-						"	FILTER (STR(?fsm) = \"" + fsmIRI + "\") . " +
+						"	FILTER (STR(?fsm) = \"" + userFsmUri + "\") . " +
 						"} LIMIT 1";
 
 		Query query = QueryFactory.create(queryString);
@@ -177,7 +168,7 @@ class FSMQueries {
 		return fsm;
 	}
 
-	private static List<Action> getActions(Model model, Resource res, String actionsType) {
+	private static List<Action> getActions(Model model, Resource res, String actionsType, String userFsmBaseUri) {
 		List<Action> entryActions = new ArrayList<>();
 
 		String property;
@@ -196,14 +187,12 @@ class FSMQueries {
 				return entryActions;
 		}
 
-		String prefix = getOntologyBaseURI(model);
-
 		String resIRI = getFormattedIRI(res.getURI());
 
 		String queryString =
 				"		 prefix fsm: <" + FSM_PREFIX + ">  \n" +
 						"prefix http: <" + HTTP_PREFIX + "> \n" +
-						"prefix : <" + prefix + "> \n" +
+						"prefix : <" + userFsmBaseUri + "> \n" +
 						"SELECT ?action ?URI ?method ?body ?timeoutInMs \n" +
 						"WHERE { \n" +
 						resIRI + " " + property + " ?action . \n" +
@@ -247,17 +236,15 @@ class FSMQueries {
 		return entryActions;
 	}
 
-	private static List<Guard> getTransitionGuards(Model model, Resource transitionRes) {
+	private static List<Guard> getTransitionGuards(Model model, Resource transitionRes, String serverBaseUri, String userFsmBaseUri) {
 		List<Guard> guards = new ArrayList<>();
-
-		String prefix = getOntologyBaseURI(model);
 
 		String transitionIRI = getFormattedIRI(transitionRes.getURI());
 
 		String queryString =
 				"		 prefix fsm: <" + FSM_PREFIX + "> " +
 						"prefix http: <" + HTTP_PREFIX + "> " +
-						"prefix : <" + prefix + "> " +
+						"prefix : <" + userFsmBaseUri + "> " +
 						"SELECT ?guard " +
 						"WHERE { " +
 						transitionIRI + " fsm:hasTransitionGuard ?guard . " +
@@ -275,8 +262,8 @@ class FSMQueries {
 
 				String URI = guardRes.getURI();
 				String localName = guardRes.getLocalName();
-				List<Condition> conditions = getGuardConditions(model, guardRes);
-				List<Action> actions = getActions(model, guardRes, "guard");
+				List<Condition> conditions = getGuardConditions(model, guardRes, serverBaseUri, userFsmBaseUri);
+				List<Action> actions = getActions(model, guardRes, "guard", userFsmBaseUri);
 
 				guards.add(new Guard(URI, localName, conditions, actions));
 			}
@@ -285,17 +272,15 @@ class FSMQueries {
 		return guards;
 	}
 
-	private static List<Condition> getGuardConditions(Model model, Resource guardRes) {
+	private static List<Condition> getGuardConditions(Model model, Resource guardRes, String serverBaseUri, String userFsmBaseUri) {
 		List<Condition> conditions = new ArrayList<>();
-
-		String prefix = getOntologyBaseURI(model);
 
 		String guardIRI = getFormattedIRI(guardRes.getURI());
 
 		String queryString =
 				"		 prefix fsm: <" + FSM_PREFIX + "> " +
 						"prefix http: <" + HTTP_PREFIX + "> " +
-						"prefix : <" + prefix + "> " +
+						"prefix : <" + userFsmBaseUri + "> " +
 						"SELECT ?condition ?sparqlQuery " +
 						"WHERE { " +
 						guardIRI + " a fsm:Guard . " +
@@ -314,7 +299,8 @@ class FSMQueries {
 
 				String URI = conditionRes.getURI();
 				String localName = conditionRes.getLocalName();
-				String sparqlQueryRes = sol.getLiteral("sparqlQuery").getString().replace("\\\"", "\"");
+				String sparqlQueryRes = "PREFIX : <" + serverBaseUri + "> " +
+						sol.getLiteral("sparqlQuery").getString().replace("\\\"", "\"");
 
 				conditions.add(new Condition(URI, localName, sparqlQueryRes));
 			}
@@ -359,17 +345,15 @@ class FSMQueries {
 		}
 	}*/
 
-	private static List<Resource> getAllStatesResource(Model model, String fsmURI) {
+	private static List<Resource> getAllStatesResource(Model model, String userFsmBaseUri, String userFsmUri) {
 		List<Resource> statesRes = new ArrayList<>();
-
-		String prefix = getOntologyBaseURI(model);
 
 		String queryString =
 				"prefix fsm: <" + FSM_PREFIX + "> " +
-						"prefix : <" + prefix + "> " +
+						"prefix : <" + userFsmBaseUri + "> " +
 						"SELECT ?state " +
 						"WHERE { " +
-						getFormattedIRI(fsmURI) + " fsm:hasStateMachineElement ?state . " +
+						getFormattedIRI(userFsmUri) + " fsm:hasStateMachineElement ?state . " +
 						"	?state a fsm:State . " +
 						"}";
 		Query query = QueryFactory.create(queryString);
@@ -386,17 +370,15 @@ class FSMQueries {
 		return statesRes;
 	}
 
-	private static List<QuerySolution> getTransitionsRes(Model model, State state) {
+	private static List<QuerySolution> getTransitionsRes(Model model, State state, String userFsmBaseUri) {
 		List<QuerySolution> transitionsSol = new ArrayList<>();
-
-		String prefix = getOntologyBaseURI(model);
 
 		String stateIRI = getFormattedIRI(state.getURI());
 
 		//TODO: check the importance of stating the properties' classes instead of only the properties
 		String queryString =
 				"prefix fsm: <" + FSM_PREFIX + "> " +
-						"prefix : <" + prefix + "> " +
+						"prefix : <" + userFsmBaseUri + "> " +
 						"SELECT ?transition ?targetState " +
 						"WHERE { " +
 						"	?transition fsm:hasSourceState " + stateIRI + " . " +
@@ -414,16 +396,14 @@ class FSMQueries {
 		return transitionsSol;
 	}
 
-	private static Resource getInitialState(Model model) {
+	private static Resource getInitialState(Model model, String userFsmUri) {
 		Resource initialStateRes = null;
-
-		String prefix = getOntologyBaseURI(model);
 
 		String queryString =
 				"		  prefix fsm: <" + FSM_PREFIX + "> " +
-						" prefix : <" + prefix + "> " +
 						" SELECT ?initialState " +
 						" WHERE { " +
+						"<" + userFsmUri + "> fsm:hasStateMachineElement ?initialState . " +
 						"   ?initialState a fsm:InitialState . " +
 						" } " +
 						" LIMIT 1";

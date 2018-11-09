@@ -1,7 +1,7 @@
 package infrastructure.controllers;
 
 import akka.actor.ActorRef;
-import controllers.routes;
+import akka.routing.Router;
 import domain.fsm.engine.OnStateChangeMessage;
 import domain.fsm.engine.FsmEngineFactory;
 import domain.fsm.engine.exceptions.InitialStateNotFoundException;
@@ -40,7 +40,10 @@ public class UploadFileController extends Controller {
 				UUID uuid = UUID.fromString(uuidString);
 
 				try {
-					ActorRef actorRef = fsmEngineFactory.create(file, fsmIri, uuid);
+					String serverUrl = routes.FsmClientController.startWebSocket().absoluteURL(false, "localhost:9000");
+					System.out.println("Server URL = " + serverUrl);
+
+					ActorRef actorRef = fsmEngineFactory.create(file, fsmIri, serverUrl, uuid);
 
 					actorRef.path();
 					actorRef.tell(new OnStateChangeMessage(), ActorRef.noSender());

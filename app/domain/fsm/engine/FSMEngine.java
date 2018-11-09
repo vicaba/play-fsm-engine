@@ -32,23 +32,29 @@ public class FSMEngine {
 	private Model model, localModel;
 	private boolean useLocalModel;
 	private State actualState;
-	private String userBaseURI;
 
-	public FSMEngine(File file, String fsmIri, HTTPClient httpClient) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+	private String serverBaseUri;
+	private String userFsmBaseUri;
+	private String userFsmUri;
+
+	public FSMEngine(File file, String userFsmUri, String serverBaseUri, HTTPClient httpClient) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+		this.serverBaseUri = serverBaseUri;
 		this.httpClient = httpClient;
+
+		System.out.println("Server base URI = " + serverBaseUri);
 
 		State initialState;
 
 		FiniteStateMachine fsm;
 
-		Model userModel = ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE");
+		Model userFsmModel = ModelFactory.createDefaultModel().read(new FileInputStream(file), null, "TURTLE");
 
-		userBaseURI = userModel.getNsPrefixURI("");
+		userFsmBaseUri = userFsmModel.getNsPrefixURI("");
 
-		fsm = FSMQueries.readFSM(userModel, fsmIri);
+		fsm = FSMQueries.readFSM(userFsmModel, serverBaseUri, userFsmBaseUri, userFsmUri);
 		if (fsm == null) {
 			System.out.println("Can't find the Finite State Machine");
-			throw new OntologyNotFoundException("The ontology " + userBaseURI + " was not found");
+			throw new OntologyNotFoundException("The ontology was not found");
 		}
 
 		initialState = fsm.getInitialState();
@@ -81,7 +87,7 @@ public class FSMEngine {
 		System.out.println("State -> " + actualState.getLocalName());
 
 		//Check if the conditions will be checked only against data that arrive now
-		if (FSMQueries.onlyNewDataAllowed(actualState, model)) {
+		if (FSMQueries.onlyNewDataAllowed(actualState, model, userFsmBaseUri)) {
 			localModel = ModelFactory.createDefaultModel();
 			//localModel.read(TC_SYS_ONT);
 			useLocalModel = true;
@@ -145,11 +151,11 @@ public class FSMEngine {
 	}
 
 	public void insertData(String data) {
-		data = "@prefix : <" + userBaseURI + ">	. " + data;
+		data = "@prefix : <" + serverBaseUri + ">	. " + data;
 
 		model.enterCriticalSection(Lock.WRITE);
 		try {
-			RDFDataMgr.read(model, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
+			RDFDataMgr.read(model, new StringReader(data), userFsmBaseUri, Lang.TTL);
 		} catch (Exception e) {
 			System.out.println("\tBody message bad RDF Turtle format");
 		} finally {
@@ -159,7 +165,7 @@ public class FSMEngine {
 		if (localModel != null) {
 			localModel.enterCriticalSection(Lock.WRITE);
 			try {
-				RDFDataMgr.read(localModel, new StringReader(data), FSMQueries.getOntologyBaseURI(model), Lang.TTL);
+				RDFDataMgr.read(localModel, new StringReader(data), userFsmBaseUri, Lang.TTL);
 			} catch (Exception e) {
 				System.out.println("\tBody message bad RDF Turtle format");
 			} finally {
@@ -171,7 +177,7 @@ public class FSMEngine {
 	public String getData(String query) {
 		var result = "";
 
-		query = "PREFIX : <" + userBaseURI + ">	" + query;
+		query = "PREFIX : <" + serverBaseUri + ">	" + query;
 
 		model.enterCriticalSection(Lock.READ);
 		try {
@@ -186,7 +192,7 @@ public class FSMEngine {
 	}
 
 	public void executeOperation(String operation) {
-		operation = "PREFIX : <" + userBaseURI + ">	" + operation;
+		operation = "PREFIX : <" + serverBaseUri + ">	" + operation;
 
 		model.enterCriticalSection(Lock.WRITE);
 		try {
