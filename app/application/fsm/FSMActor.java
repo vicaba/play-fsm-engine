@@ -110,6 +110,8 @@ public class FSMActor extends AbstractActor {
 					fsmEngine.insertData(sendDataMessage.getData());
 
 					sendNotification("otherInfo", "I have received some data");
+
+					self().tell(new TryTransitionsMessage(), self());
 				})
 
 
@@ -129,6 +131,8 @@ public class FSMActor extends AbstractActor {
 					fsmEngine.executeOperation(executeOperationMessage.getOperation());
 
 					sendNotification("otherInfo", "I have received some data");
+
+					self().tell(new TryTransitionsMessage(), self());
 				})
 
 

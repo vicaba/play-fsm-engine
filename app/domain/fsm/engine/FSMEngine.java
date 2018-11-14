@@ -35,13 +35,16 @@ public class FSMEngine {
 
 	private String serverBaseUri;
 	private String userFsmBaseUri;
-	private String userFsmUri;
 
-	public FSMEngine(File file, String userFsmUri, String serverBaseUri, HTTPClient httpClient) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
+	private UUID myId;
+
+	FSMEngine(File file, String userFsmUri, String serverBaseUri, HTTPClient httpClient, UUID myId) throws OntologyNotFoundException, InitialStateNotFoundException, FileNotFoundException {
 		this.serverBaseUri = serverBaseUri;
 		this.httpClient = httpClient;
+		this.myId = myId;
 
-		System.out.println("Server base URI = " + serverBaseUri);
+		printMessage("Server base URI = " + serverBaseUri);
+		printMessage("User FSM URI = " + userFsmUri);
 
 		State initialState;
 
@@ -51,15 +54,17 @@ public class FSMEngine {
 
 		userFsmBaseUri = userFsmModel.getNsPrefixURI("");
 
+		printMessage("User FSM base URI = " + userFsmBaseUri);
+
 		fsm = FSMQueries.readFSM(userFsmModel, serverBaseUri, userFsmBaseUri, userFsmUri);
 		if (fsm == null) {
-			System.out.println("Can't find the Finite State Machine");
+			printMessage("Can't find the Finite State Machine");
 			throw new OntologyNotFoundException("The ontology was not found");
 		}
 
 		initialState = fsm.getInitialState();
 		if (initialState == null) {
-			System.out.println("No initial state found");
+			printMessage("No initial state found");
 			throw new InitialStateNotFoundException();
 		}
 
@@ -67,7 +72,7 @@ public class FSMEngine {
 		//Aqui toca leer informacion sobre el sistema, como los sensores, etc
 		//model.read(new FileInputStream(file), null);
 
-		System.out.println("Init state -> " + initialState.getLocalName());
+		printMessage("Init state -> " + initialState.getLocalName());
 
 		localModel = null;
 		useLocalModel = false;
@@ -84,7 +89,7 @@ public class FSMEngine {
 	}
 
 	public void prepareNewState() {
-		System.out.println("State -> " + actualState.getLocalName());
+		printMessage("State -> " + actualState.getLocalName());
 
 		//Check if the conditions will be checked only against data that arrive now
 		if (FSMQueries.onlyNewDataAllowed(actualState, model, userFsmBaseUri)) {
@@ -127,7 +132,7 @@ public class FSMEngine {
 
 		actions.forEach(action -> {
 			CompletionStage stage;
-			System.out.println("Executing action " + action.getLocalName() + " at " + action.getTargetURI());
+			printMessage("Executing action " + action.getLocalName() + " at " + action.getTargetURI());
 
 			switch (action.getMethod()) {
 				case "GET":
@@ -150,14 +155,14 @@ public class FSMEngine {
 		return CompletableFuture.allOf(futuresArray);
 	}
 
-	public void insertData(String data) {
-		data = "@prefix : <" + serverBaseUri + ">	. " + data;
+	public void insertData(String rdfData) {
+		rdfData = FSMQueries.addBasePrefixesToRdf(rdfData, serverBaseUri);
 
 		model.enterCriticalSection(Lock.WRITE);
 		try {
-			RDFDataMgr.read(model, new StringReader(data), userFsmBaseUri, Lang.TTL);
+			RDFDataMgr.read(model, new StringReader(rdfData), userFsmBaseUri, Lang.TTL);
 		} catch (Exception e) {
-			System.out.println("\tBody message bad RDF Turtle format");
+			printMessage("\tBody message bad RDF Turtle format");
 		} finally {
 			model.leaveCriticalSection();
 		}
@@ -165,9 +170,9 @@ public class FSMEngine {
 		if (localModel != null) {
 			localModel.enterCriticalSection(Lock.WRITE);
 			try {
-				RDFDataMgr.read(localModel, new StringReader(data), userFsmBaseUri, Lang.TTL);
+				RDFDataMgr.read(localModel, new StringReader(rdfData), userFsmBaseUri, Lang.TTL);
 			} catch (Exception e) {
-				System.out.println("\tBody message bad RDF Turtle format");
+				printMessage("\tBody message bad RDF Turtle format");
 			} finally {
 				localModel.leaveCriticalSection();
 			}
@@ -177,7 +182,7 @@ public class FSMEngine {
 	public String getData(String query) {
 		var result = "";
 
-		query = "PREFIX : <" + serverBaseUri + ">	" + query;
+		query = FSMQueries.addBasePrefixesToQuery(query, serverBaseUri);
 
 		model.enterCriticalSection(Lock.READ);
 		try {
@@ -191,12 +196,12 @@ public class FSMEngine {
 		return result;
 	}
 
-	public void executeOperation(String operation) {
-		operation = "PREFIX : <" + serverBaseUri + ">	" + operation;
+	public void executeOperation(String query) {
+		query = FSMQueries.addBasePrefixesToQuery(query, serverBaseUri);
 
 		model.enterCriticalSection(Lock.WRITE);
 		try {
-			FSMQueries.executeOperation(model, operation);
+			FSMQueries.executeOperation(model, query);
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -206,7 +211,7 @@ public class FSMEngine {
 		if (localModel != null) {
 			localModel.enterCriticalSection(Lock.READ);
 			try {
-				FSMQueries.executeOperation(localModel, operation);
+				FSMQueries.executeOperation(localModel, query);
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {
@@ -251,5 +256,10 @@ public class FSMEngine {
 		System.out.println("\t\tBody: " + body);
 
 		insertData(body);
+	}
+
+	private void printMessage(String message) {
+		char id = myId.toString().charAt(0);
+		System.out.println("FSM " + id + ": ");
 	}
 }

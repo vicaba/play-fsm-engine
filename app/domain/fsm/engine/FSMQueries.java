@@ -40,8 +40,8 @@ class FSMQueries {
 		for (Resource stateRes : statesRes) {
 			String stateURI = stateRes.getURI();
 			String stateLocalName = stateRes.getLocalName();
-			List<Action> entryActions = getActions(model, stateRes, "entry", userFsmBaseUri);
-			List<Action> exitActions = getActions(model, stateRes, "exit", userFsmBaseUri);
+			List<Action> entryActions = getActions(model, stateRes, "entry", serverBaseUri, userFsmBaseUri);
+			List<Action> exitActions = getActions(model, stateRes, "exit", serverBaseUri, userFsmBaseUri);
 			states.add(new State(stateURI, stateLocalName, entryActions, exitActions, new ArrayList<>()));
 		}
 
@@ -132,6 +132,20 @@ class FSMQueries {
 		return sb.toString();
 	}
 
+	static String addBasePrefixesToRdf(String rdf, String uri) {
+		String basePrefix = "@prefix : <" + uri + "#> ";
+		String selfPrefix = "@prefix self: <" + uri + "> ";
+
+		return basePrefix + selfPrefix + rdf;
+	}
+
+	static String addBasePrefixesToQuery(String query, String uri) {
+		String basePrefix = "PREFIX : <" + uri + "#> ";
+		String selfPrefix = "PREFIX self: <" + uri + "> ";
+
+		return basePrefix + selfPrefix + query;
+	}
+
 	private static State findStateByURI(List<State> states, String URI) {
 		for (State state : states) {
 			if (state.getURI().equals(URI)) {
@@ -168,7 +182,7 @@ class FSMQueries {
 		return fsm;
 	}
 
-	private static List<Action> getActions(Model model, Resource res, String actionsType, String userFsmBaseUri) {
+	private static List<Action> getActions(Model model, Resource res, String actionsType, String serverBaseUri, String userFsmBaseUri) {
 		List<Action> entryActions = new ArrayList<>();
 
 		String property;
@@ -193,14 +207,15 @@ class FSMQueries {
 				"		 prefix fsm: <" + FSM_PREFIX + ">  \n" +
 						"prefix http: <" + HTTP_PREFIX + "> \n" +
 						"prefix : <" + userFsmBaseUri + "> \n" +
-						"SELECT ?action ?URI ?method ?body ?timeoutInMs \n" +
+						"SELECT ?action ?URI ?method ?bodyContent ?bodyType ?timeoutInMs \n" +
 						"WHERE { \n" +
 						resIRI + " " + property + " ?action . \n" +
 						"	?action a fsm:Action . \n" +
 						"	?action a http:Request . \n" +
 						"	?action http:absoluteURI ?URI . \n" +
 						"	?action http:mthd ?method . \n" +
-						"  OPTIONAL { ?action fsm:hasBody ?body } . \n" +
+						"  OPTIONAL { ?action fsm:hasBody ?body . ?body fsm:hasContent ?bodyContent } . \n" +
+						"  OPTIONAL { ?body fsm:hasBodyType ?bodyType } . \n" +
 						"  OPTIONAL { ?action fsm:hasTimeoutInMs ?timeoutInMs } . \n" +
 						"}";
 
@@ -220,8 +235,23 @@ class FSMQueries {
 				String method = sol.getResource("method").getLocalName();
 
 				String body = "";
-				if (sol.contains("body")) {
+				if (sol.contains("bodyContent")) {
 					body = sol.getLiteral("body").getString();
+
+					if (sol.contains("bodyType")) {
+						switch (sol.getResource("bodyType").getLocalName()) {
+							case "rdf":
+								body = addBasePrefixesToRdf(body, serverBaseUri);
+								break;
+							case "sparql":
+								body = addBasePrefixesToQuery(body, serverBaseUri);
+								break;
+							case "other":
+							default:
+								//Don't do anything to the data
+								break;
+						}
+					}
 				}
 
 				int timeoutInMs = 1;
@@ -263,7 +293,7 @@ class FSMQueries {
 				String URI = guardRes.getURI();
 				String localName = guardRes.getLocalName();
 				List<Condition> conditions = getGuardConditions(model, guardRes, serverBaseUri, userFsmBaseUri);
-				List<Action> actions = getActions(model, guardRes, "guard", userFsmBaseUri);
+				List<Action> actions = getActions(model, guardRes, "guard", serverBaseUri, userFsmBaseUri);
 
 				guards.add(new Guard(URI, localName, conditions, actions));
 			}
@@ -285,7 +315,7 @@ class FSMQueries {
 						"WHERE { " +
 						guardIRI + " a fsm:Guard . " +
 						guardIRI + " fsm:hasGuardCondition ?condition . " +
-						"	?condition fsm:hasBody ?sparqlQuery . " +
+						"	?condition fsm:hasContent ?sparqlQuery . " +
 						"}";
 
 		Query query = QueryFactory.create(queryString);
@@ -299,8 +329,9 @@ class FSMQueries {
 
 				String URI = conditionRes.getURI();
 				String localName = conditionRes.getLocalName();
-				String sparqlQueryRes = "PREFIX : <" + serverBaseUri + "> " +
-						sol.getLiteral("sparqlQuery").getString().replace("\\\"", "\"");
+				String sparqlQueryRes = sol.getLiteral("sparqlQuery").getString().replace("\\\"", "\"");
+
+				sparqlQueryRes = addBasePrefixesToQuery(sparqlQueryRes, serverBaseUri);
 
 				conditions.add(new Condition(URI, localName, sparqlQueryRes));
 			}
