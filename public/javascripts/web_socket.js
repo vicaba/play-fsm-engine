@@ -18,12 +18,19 @@ $(document).ready(function () {
 
       socket.send(JSON.stringify(msg));
       console.log("id enviado");
+
+      setInterval(function () { ping(socket) }, 5000);
    };
 
    socket.onmessage = function (event) {
       var msg = JSON.parse(event.data);
       console.log("Json received " + event.data);
       var color;
+
+      if (msg.type === "pong") {
+         console.log("pong");
+         return;
+      }
 
       switch (msg.type) {
          case "connected":
@@ -58,4 +65,15 @@ function writeMessage(text, color) {
 
    feedContent.append(newFeed);
 }
+
+function ping(socket) {
+   var msg = {
+      type: "ping"
+   };
+   console.log("ping");
+
+   socket.send(JSON.stringify(msg));
+}
+
+
 

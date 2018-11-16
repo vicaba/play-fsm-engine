@@ -1,7 +1,13 @@
 package infrastructure.controllers;
 
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import play.mvc.*;
 import infrastructure.BodyParser;
+
+import java.io.StringReader;
 
 public class CheckCompatibilityController extends Controller {
 
@@ -11,9 +17,19 @@ public class CheckCompatibilityController extends Controller {
 	public Result index() {
 		try {
 			String body = BodyParser.parseRawBuffer(request().body().asRaw());
-			System.out.println("Body");
 
-			return ok("self: fsm:hasCompatibility :compatibility1 . :compatibility1 siot:with Peer :peer20 . :compatibility1 fsm:hasContent \"true\"");
+			Model model = ModelFactory.createDefaultModel();
+			RDFDataMgr.read(model, new StringReader(body), null, Lang.TTL);
+
+			String basePrefix = "@prefix : <" + model.getNsPrefixURI("") + "> . " ;
+			String selfPrefix = "@prefix : <" + model.getNsPrefixURI("self") + "> . " ;
+			String fsmPrefix = "@prefix fsm: <file:///D:/projects/ontologies/fsm/fsm.owl#> .";
+			String siotPrefix = "@prefix siot: <file:///D:/projects/ontologies/siot/siot.owl#> .";
+
+			String rdfResponse = basePrefix + selfPrefix + fsmPrefix + siotPrefix +
+					"self: fsm:hasCompatibility :compatibility1 . :compatibility1 siot:with Peer :peer20 . :compatibility1 fsm:hasContent \"true\"";
+
+			return ok(rdfResponse);
 		} catch (Exception e) {
 			return badRequest("FSM not found");
 		}

@@ -28,27 +28,35 @@ public class WebSocketActor extends AbstractActor {
 
 
 				.match(JsonNode.class, message -> {
-					if (!message.has("type") || !message.findPath("type").textValue().equals("connection_request")) {
+					if (!message.has("type")) {
 						tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message"));
 						return;
 					}
+					String type = message.findPath("type").textValue();
 
-					String actorId = message.findPath("wsId").textValue();
 
-					ActorRef fsmActor = FSMActor.findActorById(getContext().getSystem(), actorId);
+					switch (type) {
+						case "connection_request":
+							String actorId = message.findPath("wsId").textValue();
 
-					fsmActor.tell(new EstablishConnectionMessage(), self());
+							ActorRef fsmActor = FSMActor.findActorById(getContext().getSystem(), actorId);
+
+							fsmActor.tell(new EstablishConnectionMessage(), self());
+							break;
+						case "ping":
+							tellClient(new NotifyStatusChangedMessage("pong", "Ping response"));
+							break;
+						default:
+							tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message"));
+							break;
+					}
 				})
-
 
 				.match(NotifyStatusChangedMessage.class, this::tellClient)
 
-
 				.matchAny(m -> {
-					System.out.println("he recibido " + m.getClass().toString());
-					tellClient(new NotifyStatusChangedMessage("bad_message", "I've recieved a bad message" + m.toString()));
+					tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message" + m.toString()));
 				})
-
 
 				.build();
 	}

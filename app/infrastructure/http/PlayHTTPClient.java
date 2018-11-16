@@ -23,7 +23,6 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 		this.wsClient = wsClient;
 	}
 
-
 	/*public void stop() {
 		try {
 			wsClient.close();
@@ -33,14 +32,14 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 	}*/
 
 	public CompletionStage<Boolean> getRequest(String url, BiConsumer<Integer, String> postAction, int timeoutInMs) {
-		return doRequest("GET", url, postAction, null, timeoutInMs);
+		return doRequest("GET", url, postAction, null, null, timeoutInMs);
 	}
 
-	public CompletionStage<Boolean> postRequest(String url, String bodyToSend, BiConsumer<Integer, String> postAction, int timeoutInMs) {
-		return doRequest("POST", url, postAction, bodyToSend, timeoutInMs);
+	public CompletionStage<Boolean> postRequest(String url, String bodyType, String bodyToSend, BiConsumer<Integer, String> postAction, int timeoutInMs) {
+		return doRequest("POST", url, postAction, bodyType, bodyToSend, timeoutInMs);
 	}
 
-	private CompletionStage<Boolean> doRequest(String method, String url, BiConsumer<Integer, String> postAction, String bodyToSend, int timeoutInMs) {
+	private CompletionStage<Boolean> doRequest(String method, String url, BiConsumer<Integer, String> postAction, String bodyType, String bodyToSend, int timeoutInMs) {
 		CompletionStage<WSResponse> responseStage;
 
 		WSRequest request = wsClient.url(url);
@@ -51,6 +50,12 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 				responseStage = request.get();
 				break;
 			case "POST":
+				System.out.println("POST at " + url + " with body " + bodyToSend);
+				switch (bodyType) {
+					case "rdf":
+						request.addHeader("Content-Type", "application/x-turtle");
+						break;
+				}
 				responseStage = request.post(bodyToSend);
 				break;
 			default:
@@ -59,7 +64,7 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 
 		return responseStage.handle((wsResponse, exception) -> {
 			if (wsResponse == null) {
-				System.out.println("There was an error with the http call, check the URL!");
+				System.err.println("Timeout occurred on an action");
 			} else {
 				System.out.println(wsResponse.getStatus() + " STATUS");
 				String b = wsResponse.getBody(string());

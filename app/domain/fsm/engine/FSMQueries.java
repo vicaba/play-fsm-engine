@@ -133,8 +133,8 @@ class FSMQueries {
 	}
 
 	static String addBasePrefixesToRdf(String rdf, String uri) {
-		String basePrefix = "@prefix : <" + uri + "#> ";
-		String selfPrefix = "@prefix self: <" + uri + "> ";
+		String basePrefix = "@prefix : <" + uri + "#> . ";
+		String selfPrefix = "@prefix self: <" + uri + "> . ";
 
 		return basePrefix + selfPrefix + rdf;
 	}
@@ -235,11 +235,14 @@ class FSMQueries {
 				String method = sol.getResource("method").getLocalName();
 
 				String body = "";
+				String bodyType = "";
 				if (sol.contains("bodyContent")) {
-					body = sol.getLiteral("body").getString();
+					body = sol.getLiteral("bodyContent").getString();
 
 					if (sol.contains("bodyType")) {
-						switch (sol.getResource("bodyType").getLocalName()) {
+						bodyType = sol.getResource("bodyType").getLocalName();
+
+						switch (bodyType) {
 							case "rdf":
 								body = addBasePrefixesToRdf(body, serverBaseUri);
 								break;
@@ -254,12 +257,12 @@ class FSMQueries {
 					}
 				}
 
-				int timeoutInMs = 1;
+				int timeoutInMs = 500;
 				if (sol.contains("timeoutInMs")) {
 					timeoutInMs = sol.getLiteral("timeoutInMs").getInt();
 				}
 
-				entryActions.add(new Action(actionURI, actionLocalName, targetURI, method, body, timeoutInMs));
+				entryActions.add(new Action(actionURI, actionLocalName, targetURI, method, bodyType, body, timeoutInMs));
 			}
 		}
 

@@ -139,7 +139,7 @@ public class FSMEngine {
 					stage = httpClient.getRequest(action.getTargetURI(), this::onActionResponse, action.getTimeoutInMs());
 					break;
 				case "POST":
-					stage = httpClient.postRequest(action.getTargetURI(), action.getBody(), this::onActionResponse, action.getTimeoutInMs());
+					stage = httpClient.postRequest(action.getTargetURI(), action.getBodyType(), action.getBody(), this::onActionResponse, action.getTimeoutInMs());
 					break;
 				default:
 					stage = CompletableFuture.completedStage(true);
@@ -260,6 +260,6 @@ public class FSMEngine {
 
 	private void printMessage(String message) {
 		char id = myId.toString().charAt(0);
-		System.out.println("FSM " + id + ": ");
+		System.out.println("FSM " + id + ": " + message);
 	}
 }

@@ -25,7 +25,7 @@ public class ExecuteOperationController extends Controller {
 
 			fsmActor.tell(new ExecuteOperationMessage(body), ActorRef.noSender());
 
-			return ok("Content saved?!?!");
+			return ok();
 		} catch (Exception e) {
 			return badRequest("FSM not found");
 		}

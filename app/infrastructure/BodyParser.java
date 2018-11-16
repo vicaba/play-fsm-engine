@@ -18,7 +18,7 @@ public class BodyParser {
 			br.lines().forEach(sb::append);
 
 			body = sb.toString();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 

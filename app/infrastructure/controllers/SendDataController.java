@@ -25,8 +25,9 @@ public class SendDataController extends Controller {
 
 			fsmActor.tell(new SendDataMessage(body), ActorRef.noSender());
 
-			return ok("Content saved?!?!");
+			return ok();
 		} catch (Exception e) {
+			e.printStackTrace();
 			return badRequest("FSM not found");
 		}
 	}
