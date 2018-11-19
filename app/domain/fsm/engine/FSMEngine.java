@@ -252,8 +252,8 @@ public class FSMEngine {
 	}
 
 	private void onActionResponse(int status, String body) {
-		System.out.println("\t\tStatus: " + status);
-		System.out.println("\t\tBody: " + body);
+		printMessage("\t\tStatus: " + status);
+		printMessage("\t\tBody: " + body);
 
 		insertData(body);
 	}

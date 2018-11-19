@@ -27,12 +27,13 @@ $(document).ready(function () {
       console.log("Json received " + event.data);
       var color;
 
-      if (msg.type === "pong") {
-         console.log("pong");
-         return;
-      }
-
       switch (msg.type) {
+         case "fsm_ended":
+            color = "red";
+            break;
+         case "pong":
+            console.log("pong");
+            return;
          case "connected":
             color = "blue";
             break;
@@ -40,7 +41,7 @@ $(document).ready(function () {
             color = "green";
             break;
          case "otherInfo":
-            color = "brown";
+            color = "LightSeaGreen";
             break;
          default:
             color = "black";

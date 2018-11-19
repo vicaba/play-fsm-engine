@@ -3,6 +3,7 @@ package application.fsm;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.PoisonPill;
 import domain.fsm.engine.EstablishConnectionMessage;
 import domain.fsm.engine.FSMEngine;
 import domain.fsm.engine.OnStateChangeMessage;
@@ -28,13 +29,6 @@ public class FSMActor extends AbstractActor {
 		statusChangeList = new ArrayList<>();
 	}
 
-	/*
-	//TODO: implement destroy to stop an FSM_Actor
-	public void destroy() {
-		httpClient.stop();
-	}
-	*/
-
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
@@ -56,7 +50,12 @@ public class FSMActor extends AbstractActor {
 
 					fsmEngine.executeActions(entryActions).thenAccept(f -> {
 						printMessage("Entry actions finished");
-						self().tell(new TryTransitionsMessage(), self());
+
+						if (fsmEngine.getActualState().isFinal()) {
+							close();
+						} else {
+							self().tell(new TryTransitionsMessage(), self());
+						}
 					});
 				})
 
@@ -169,6 +168,13 @@ public class FSMActor extends AbstractActor {
 		}
 
 		printMessage(message);
+	}
+
+	private void close() {
+		if (notifierActor != null) {
+			notifierActor.tell(new CloseActorMessage(), self());
+		}
+		self().tell(PoisonPill.getInstance(), self());
 	}
 
 	private void printMessage(String message) {

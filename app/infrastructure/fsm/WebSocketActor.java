@@ -1,6 +1,7 @@
 package infrastructure.fsm;
 
 import akka.actor.*;
+import application.fsm.CloseActorMessage;
 import application.fsm.FSMActor;
 import application.fsm.NotifyStatusChangedMessage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,6 +54,11 @@ public class WebSocketActor extends AbstractActor {
 				})
 
 				.match(NotifyStatusChangedMessage.class, this::tellClient)
+
+				.match(CloseActorMessage.class, m -> {
+					tellClient(new NotifyStatusChangedMessage("fsm_ended", "The fsm execution has finished"));
+					self().tell(PoisonPill.getInstance(), self());
+				})
 
 				.matchAny(m -> {
 					tellClient(new NotifyStatusChangedMessage("bad_message", "I've received a bad message" + m.toString()));

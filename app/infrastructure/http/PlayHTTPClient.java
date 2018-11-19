@@ -50,7 +50,6 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 				responseStage = request.get();
 				break;
 			case "POST":
-				System.out.println("POST at " + url + " with body " + bodyToSend);
 				switch (bodyType) {
 					case "rdf":
 						request.addHeader("Content-Type", "application/x-turtle");
@@ -66,7 +65,6 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 			if (wsResponse == null) {
 				System.err.println("Timeout occurred on an action");
 			} else {
-				System.out.println(wsResponse.getStatus() + " STATUS");
 				String b = wsResponse.getBody(string());
 				postAction.accept(wsResponse.getStatus(), b);
 			}

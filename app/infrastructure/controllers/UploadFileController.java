@@ -40,7 +40,7 @@ public class UploadFileController extends Controller {
 				UUID uuid = UUID.fromString(uuidString);
 
 				try {
-					String serverUrl = routes.FsmClientController.startWebSocket().absoluteURL(false, "localhost:9000");
+					String serverUrl = "http://localhost:9000";
 					System.out.println("Server URL = " + serverUrl);
 
 					ActorRef actorRef = fsmEngineFactory.create(file, fsmIri, serverUrl, uuid);

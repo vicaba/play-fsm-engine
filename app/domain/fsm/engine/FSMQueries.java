@@ -5,6 +5,7 @@ import domain.fsm.entities.Condition;
 import domain.fsm.entities.FiniteStateMachine;
 import domain.fsm.entities.Guard;
 import domain.fsm.entities.State;
+import domain.fsm.entities.StateType;
 import domain.fsm.entities.Transition;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
@@ -36,13 +37,15 @@ class FSMQueries {
 		String fsmLocalName = fsmRes.getLocalName();
 		System.out.println(fsmLocalName);
 
-		List<Resource> statesRes = getAllStatesResource(model, userFsmBaseUri, userFsmUri);
-		for (Resource stateRes : statesRes) {
-			String stateURI = stateRes.getURI();
+		List<Resource> statesResource = getAllStatesResource(model, userFsmBaseUri, userFsmUri);
+		for (Resource stateRes : statesResource) {
+			String stateUri = stateRes.getURI();
 			String stateLocalName = stateRes.getLocalName();
+			StateType stateType = getStateType(model, stateUri);
 			List<Action> entryActions = getActions(model, stateRes, "entry", serverBaseUri, userFsmBaseUri);
 			List<Action> exitActions = getActions(model, stateRes, "exit", serverBaseUri, userFsmBaseUri);
-			states.add(new State(stateURI, stateLocalName, entryActions, exitActions, new ArrayList<>()));
+			states.add(new State(stateUri, stateLocalName, stateType, entryActions, exitActions, new ArrayList<>()));
+			System.out.println("State " + stateLocalName + " is a " + stateType.toString());
 		}
 
 		for (State sourceState : states) {
@@ -403,6 +406,40 @@ class FSMQueries {
 
 		return statesRes;
 	}
+
+	private static StateType getStateType(Model model, String stateUri) {
+		String queryString =
+				"prefix fsm: <" + FSM_PREFIX + "> " +
+						"SELECT ?stateType " +
+						"WHERE { " +
+						"	<" + stateUri + "> a ?stateType . " +
+						"}";
+
+
+		try (QueryExecution qe = QueryExecutionFactory.create(queryString, model)) {
+			ResultSet results = qe.execSelect();
+			while (results.hasNext()) {
+				QuerySolution sol = results.next();
+
+				Resource stateType = sol.getResource("stateType");
+				String stateClass = stateType.getLocalName();
+
+				if (!stateClass.equals("State")) {
+					switch (stateClass) {
+						case "InitialState":
+							return StateType.INITIAL;
+						case "FinalState":
+							return StateType.FINAL;
+						case "SimpleState":
+							return StateType.SIMPLE;
+					}
+				}
+			}
+		}
+
+		return StateType.DEFAULT;
+	}
+
 
 	private static List<QuerySolution> getTransitionsRes(Model model, State state, String userFsmBaseUri) {
 		List<QuerySolution> transitionsSol = new ArrayList<>();

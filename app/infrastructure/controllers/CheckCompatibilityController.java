@@ -22,12 +22,15 @@ public class CheckCompatibilityController extends Controller {
 			RDFDataMgr.read(model, new StringReader(body), null, Lang.TTL);
 
 			String basePrefix = "@prefix : <" + model.getNsPrefixURI("") + "> . " ;
-			String selfPrefix = "@prefix : <" + model.getNsPrefixURI("self") + "> . " ;
-			String fsmPrefix = "@prefix fsm: <file:///D:/projects/ontologies/fsm/fsm.owl#> .";
-			String siotPrefix = "@prefix siot: <file:///D:/projects/ontologies/siot/siot.owl#> .";
+			String selfPrefix = "@prefix self: <" + model.getNsPrefixURI("self") + "> . " ;
+			String fsmPrefix = "@prefix fsm: <file:///D:/projects/ontologies/fsm/fsm.owl#> . ";
+			String siotPrefix = "@prefix siot: <file:///D:/projects/ontologies/siot/siot.owl#> . ";
 
 			String rdfResponse = basePrefix + selfPrefix + fsmPrefix + siotPrefix +
-					"self: fsm:hasCompatibility :compatibility1 . :compatibility1 siot:with Peer :peer20 . :compatibility1 fsm:hasContent \"true\"";
+					"self: siot:hasPeer :peer20 . " +
+					"self: siot:hasCompatibility :compatibility1 . " +
+					":compatibility1 siot:withPeer :peer20 . " +
+					":compatibility1 fsm:hasContent \"true\" ";
 
 			return ok(rdfResponse);
 		} catch (Exception e) {
