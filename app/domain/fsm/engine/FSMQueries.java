@@ -260,7 +260,7 @@ class FSMQueries {
 					}
 				}
 
-				int timeoutInMs = 500;
+				int timeoutInMs = 1000;
 				if (sol.contains("timeoutInMs")) {
 					timeoutInMs = sol.getLiteral("timeoutInMs").getInt();
 				}
