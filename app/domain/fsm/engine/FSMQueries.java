@@ -4,6 +4,7 @@ import domain.fsm.entities.Action;
 import domain.fsm.entities.Condition;
 import domain.fsm.entities.FiniteStateMachine;
 import domain.fsm.entities.Guard;
+import domain.fsm.entities.Parameter;
 import domain.fsm.entities.State;
 import domain.fsm.entities.StateType;
 import domain.fsm.entities.Transition;
@@ -185,6 +186,38 @@ class FSMQueries {
 		return fsm;
 	}
 
+	/*static String buildBodyFromQuery(Model model, String queryString, String outputType) {
+		String body;
+
+		try (QueryExecution qe = QueryExecutionFactory.create(QueryFactory.create(queryString), model)) {
+			qe.execConstruct();
+
+		}
+
+		return body;
+	}*/
+
+	static String getParameterReplacement(Model model, Parameter parameter) {
+		String replacement = null;
+
+		String queryString = parameter.getQuery();
+
+		try (QueryExecution qe = QueryExecutionFactory.create(QueryFactory.create(queryString), model)) {
+			ResultSet rs = qe.execSelect();
+			List<String> varNames = rs.getResultVars();
+
+			while (rs.hasNext()) {
+				QuerySolution qs = rs.next();
+
+				for (String varName : varNames) {
+					replacement = qs.getLiteral(varName).toString();
+				}
+			}
+		}
+
+		return replacement;
+	}
+
 	private static List<Action> getActions(Model model, Resource res, String actionsType, String serverBaseUri, String userFsmBaseUri) {
 		List<Action> entryActions = new ArrayList<>();
 
@@ -210,20 +243,20 @@ class FSMQueries {
 				"		 prefix fsm: <" + FSM_PREFIX + ">  \n" +
 						"prefix http: <" + HTTP_PREFIX + "> \n" +
 						"prefix : <" + userFsmBaseUri + "> \n" +
-						"SELECT ?action ?URI ?method ?bodyContent ?bodyType ?timeoutInMs \n" +
+						"SELECT ?action ?absoluteURI ?prototypeURI ?structure ?method ?bodyContent ?bodyType ?timeoutInMs \n" +
 						"WHERE { \n" +
 						resIRI + " " + property + " ?action . \n" +
 						"	?action a fsm:Action . \n" +
 						"	?action a http:Request . \n" +
-						"	?action http:absoluteURI ?URI . \n" +
-						"	?action http:mthd ?method . \n" +
+						"	OPTIONAL { ?action http:absoluteURI ?absoluteURI } . \n" +
+						"	OPTIONAL { ?action fsm:hasPrototypeURI ?prototypeURI . ?prototypeURI fsm:hasStructure ?structure } . \n" +
+						"	OPTIONAL { ?action http:mthd ?method } . \n" +
 						"  OPTIONAL { ?action fsm:hasBody ?body . ?body fsm:hasContent ?bodyContent } . \n" +
 						"  OPTIONAL { ?body fsm:hasBodyType ?bodyType } . \n" +
 						"  OPTIONAL { ?action fsm:hasTimeoutInMs ?timeoutInMs } . \n" +
 						"}";
 
-		Query query = QueryFactory.create(queryString);
-		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+		try (QueryExecution qe = QueryExecutionFactory.create(QueryFactory.create(queryString), model)) {
 			ResultSet resultSet = qe.execSelect();
 
 			while (resultSet.hasNext()) {
@@ -233,9 +266,10 @@ class FSMQueries {
 				String actionURI = actionRes.getURI();
 				String actionLocalName = actionRes.getLocalName();
 
-				String targetURI = sol.getResource("URI").getURI();
-
-				String method = sol.getResource("method").getLocalName();
+				String method = "GET";
+				if (sol.contains("method")) {
+					method = sol.getResource("method").getLocalName();
+				}
 
 				String body = "";
 				String bodyType = "";
@@ -249,7 +283,7 @@ class FSMQueries {
 							case "rdf":
 								body = addBasePrefixesToRdf(body, serverBaseUri);
 								break;
-							case "sparql":
+							case "executableSparql":
 								body = addBasePrefixesToQuery(body, serverBaseUri);
 								break;
 							case "other":
@@ -265,7 +299,53 @@ class FSMQueries {
 					timeoutInMs = sol.getLiteral("timeoutInMs").getInt();
 				}
 
-				entryActions.add(new Action(actionURI, actionLocalName, targetURI, method, bodyType, body, timeoutInMs));
+
+				Action action = null;
+
+				if (sol.contains("absoluteURI")) {
+					String targetUri = sol.getResource("absoluteURI").getURI();
+
+					action = new Action(actionURI, actionLocalName, targetUri, method, bodyType, body, timeoutInMs);
+				} else if (sol.contains("prototypeURI")) {
+					List<Parameter> parameters = new ArrayList<>();
+
+					String uriStructure = sol.getLiteral("structure").getString();
+
+
+					Resource prototype = sol.getResource("prototypeURI");
+					System.out.println(prototype.getURI());
+
+					queryString = "		 prefix fsm: <" + FSM_PREFIX + ">  \n" +
+							"prefix http: <" + HTTP_PREFIX + "> \n" +
+							"SELECT ?placeholder ?query \n" +
+							"WHERE { \n" +
+							"	<" + prototype.getURI() + "> a fsm:PrototypeURI . \n" +
+							"	<" + prototype.getURI() + "> fsm:hasParameter ?parameter . \n" +
+							"	?parameter a fsm:PrototypeParameter . \n" +
+							"	?parameter fsm:hasPlaceholder ?placeholder . \n" +
+							"	?parameter fsm:hasQuery ?query . \n" +
+							"}";
+					try (QueryExecution qeAux = QueryExecutionFactory.create(QueryFactory.create(queryString), model)) {
+						ResultSet rs = qeAux.execSelect();
+						while (rs.hasNext()) {
+							QuerySolution qs = rs.next();
+
+							String placeholder = qs.getLiteral("placeholder").getString();
+							String query = qs.getLiteral("query").getString();
+							query = addBasePrefixesToQuery(query, serverBaseUri);
+
+							System.out.println("Parameter");
+
+							parameters.add(new Parameter(placeholder, query));
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					action = new Action(actionURI, actionLocalName, uriStructure, parameters, method, bodyType, body, timeoutInMs);
+				}
+
+				entryActions.add(action);
 			}
 		}
 
@@ -416,6 +496,7 @@ class FSMQueries {
 						"}";
 
 
+
 		try (QueryExecution qe = QueryExecutionFactory.create(queryString, model)) {
 			ResultSet results = qe.execSelect();
 			while (results.hasNext()) {
@@ -446,7 +527,6 @@ class FSMQueries {
 
 		String stateIRI = getFormattedIRI(state.getURI());
 
-		//TODO: check the importance of stating the properties' classes instead of only the properties
 		String queryString =
 				"prefix fsm: <" + FSM_PREFIX + "> " +
 						"prefix : <" + userFsmBaseUri + "> " +

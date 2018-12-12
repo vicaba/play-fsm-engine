@@ -4,6 +4,7 @@ import domain.fsm.entities.Action;
 import domain.fsm.entities.Condition;
 import domain.fsm.entities.FiniteStateMachine;
 import domain.fsm.entities.Guard;
+import domain.fsm.entities.Parameter;
 import domain.fsm.entities.State;
 import domain.fsm.entities.Transition;
 import domain.http.HTTPClient;
@@ -132,14 +133,35 @@ public class FSMEngine {
 
 		actions.forEach(action -> {
 			CompletionStage stage;
-			printMessage("Executing action " + action.getLocalName() + " at " + action.getTargetURI());
+
+			String targetUri;
+			if (action.hasAbsoluteURI()) {
+				targetUri = action.getAbsoluteUri();
+			} else {
+				targetUri = action.getUriStructure();
+				System.out.println("Structure -> " + action.getUriStructure());
+				for (Parameter parameter : action.getParameters()) {
+					String replacement = FSMQueries.getParameterReplacement(model, parameter);
+					targetUri = targetUri.replace(parameter.getPlaceholder(), replacement);
+				}
+			}
+
+			String body = action.getBody();
+			String bodyType = action.getBodyType();
+
+			if (bodyType.equals("executableSparql")) {
+				bodyType = "other";
+				body = "";
+			}
+
+			printMessage("Executing action " + action.getLocalName() + " at " + targetUri);
 
 			switch (action.getMethod()) {
 				case "GET":
-					stage = httpClient.getRequest(action.getTargetURI(), this::onActionResponse, action.getTimeoutInMs());
+					stage = httpClient.getRequest(targetUri, this::onActionResponse, action.getTimeoutInMs());
 					break;
 				case "POST":
-					stage = httpClient.postRequest(action.getTargetURI(), action.getBodyType(), action.getBody(), this::onActionResponse, action.getTimeoutInMs());
+					stage = httpClient.postRequest(targetUri, bodyType, body, this::onActionResponse, action.getTimeoutInMs());
 					break;
 				default:
 					stage = CompletableFuture.completedStage(true);

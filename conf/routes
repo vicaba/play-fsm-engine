@@ -18,7 +18,7 @@ GET         /fsm_client                   infrastructure.controllers.FsmClientCo
 # Sending messages to FSM clients
 POST        /:actorId/send_data           infrastructure.controllers.SendDataController.index(actorId: String)
 
-GET        /:actorId/get_data   infrastructure.controllers.GetDataController.index(actorId: String)
+POST        /:actorId/get_data            infrastructure.controllers.GetDataController.index(actorId: String)
 
 POST        /:actorId/execute_operation   infrastructure.controllers.ExecuteOperationController.index(actorId: String)
 
