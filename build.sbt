@@ -1,4 +1,4 @@
-name := """play-fsm-engine"""
+name := """Play-FSM-Engine"""
 
 version := "1.0-SNAPSHOT"
 
