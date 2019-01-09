@@ -172,8 +172,8 @@ class FSMQueries {
 						"	FILTER (STR(?fsm) = \"" + userFsmUri + "\") . " +
 						"} LIMIT 1";
 
-		Query query = QueryFactory.create(queryString);
-		try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+
+		try (QueryExecution qe = QueryExecutionFactory.create(QueryFactory.create(queryString), model)) {
 			ResultSet resultSet = qe.execSelect();
 
 			if (resultSet.hasNext()) {
@@ -181,6 +181,8 @@ class FSMQueries {
 
 				fsm = sol.getResource("fsm");
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
 		return fsm;
@@ -217,7 +219,7 @@ class FSMQueries {
 
 		return replacement;
 	}
-
+	
 	private static List<Action> getActions(Model model, Resource res, String actionsType, String serverBaseUri, String userFsmBaseUri) {
 		List<Action> entryActions = new ArrayList<>();
 
