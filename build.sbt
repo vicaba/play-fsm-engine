@@ -4,17 +4,17 @@ version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.8"
 
 libraryDependencies += guice
 
 libraryDependencies ++= Seq( ws )
 
 // https://mvnrepository.com/artifact/org.apache.jena/jena-core
-libraryDependencies += "org.apache.jena" % "jena-core" % "3.8.0"
+libraryDependencies += "org.apache.jena" % "jena-core" % "3.10.0"
 
 // https://mvnrepository.com/artifact/org.apache.jena/jena-arq
-libraryDependencies += "org.apache.jena" % "jena-arq" % "3.8.0"
+libraryDependencies += "org.apache.jena" % "jena-arq" % "3.10.0"
 
 // Test Database
 libraryDependencies += "com.h2database" % "h2" % "1.4.197"
