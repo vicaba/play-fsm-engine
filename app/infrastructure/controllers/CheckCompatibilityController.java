@@ -12,6 +12,7 @@ import java.io.StringReader;
 public class CheckCompatibilityController extends Controller {
 
 	public CheckCompatibilityController() {
+		
 	}
 
 	public Result index() {
@@ -23,15 +24,15 @@ public class CheckCompatibilityController extends Controller {
 
 			String basePrefix = "@prefix : <" + model.getNsPrefixURI("") + "> . " ;
 			String selfPrefix = "@prefix self: <" + model.getNsPrefixURI("self") + "> . " ;
-			String fsmPrefix = "@prefix fsm: <file:///D:/projects/ontologies/fsm/fsm.owl#> . ";
-			String siotPrefix = "@prefix siot: <file:///D:/projects/ontologies/siot/siot.owl#> . ";
+			String fsmPrefix = "@prefix fsm: <file:///D:/projects/ontologies/fsm/fsm#> . ";
+			String siotPrefix = "@prefix siot: <file:///D:/projects/ontologies/siot/siot#> . ";
 
 			String rdfResponse = basePrefix + selfPrefix + fsmPrefix + siotPrefix +
 					"self: siot:hasPeer :peer20 . " +
 					"self: siot:hasCompatibility :compatibility1 . " +
 					":compatibility1 siot:withPeer :peer20 . " +
 					":compatibility1 fsm:hasContent \"true\" ";
-
+			
 			return ok(rdfResponse);
 		} catch (Exception e) {
 			return badRequest("FSM not found");

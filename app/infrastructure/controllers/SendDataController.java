@@ -22,6 +22,8 @@ public class SendDataController extends Controller {
 			ActorRef fsmActor = FSMActor.findActorById(actorSystem, actorId);
 
 			String body = BodyParser.parseRawBuffer(request().body().asRaw());
+			System.out.println("I have recevied some Data, the body is ->");
+			System.out.println(body);
 
 			fsmActor.tell(new SendDataMessage(body), ActorRef.noSender());
 

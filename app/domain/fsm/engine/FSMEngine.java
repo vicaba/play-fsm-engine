@@ -164,7 +164,7 @@ public class FSMEngine {
 					stage = httpClient.postRequest(targetUri, bodyType, body, this::onActionResponse, action.getTimeoutInMs());
 					break;
 				default:
-					stage = CompletableFuture.completedStage(true);
+					stage = CompletableFuture.completedFuture(true);
 					break;
 			}
 
@@ -202,7 +202,7 @@ public class FSMEngine {
 	}
 
 	public String getData(String query) {
-		var result = "";
+		String result = "";
 
 		query = FSMQueries.addBasePrefixesToQuery(query, serverBaseUri);
 

@@ -50,10 +50,8 @@ public class PlayHTTPClient implements HTTPClient, WSBodyReadables, WSBodyWritab
 				responseStage = request.get();
 				break;
 			case "POST":
-				switch (bodyType) {
-					case "rdf":
-						request.addHeader("Content-Type", "application/x-turtle");
-						break;
+				if (bodyType.equals("rdf")) {
+					request.addHeader("Content-Type", "application/x-turtle");
 				}
 				responseStage = request.post(bodyToSend);
 				break;

@@ -85,7 +85,6 @@ public class FSMActor extends AbstractActor {
 
 					fsmEngine.executeActions(exitActions)
 								.thenCompose(f -> {
-
 									if (transitionActions.isEmpty()) {
 										sendNotification("otherInfo", "There aren't any transition actions");
 									} else {
@@ -93,8 +92,8 @@ public class FSMActor extends AbstractActor {
 									}
 
 									return fsmEngine.executeActions(transitionActions);
-
 								})
+
 								.thenAccept(f -> {
 									sendNotification("otherInfo", "Changing state...");
 									fsmEngine.setActualState(nextState);
@@ -117,7 +116,7 @@ public class FSMActor extends AbstractActor {
 				.match(GetDataMessage.class, getDataMessage -> {
 					printMessage("Received a query " + getDataMessage.getQuery());
 
-					var result = fsmEngine.getData(getDataMessage.getQuery());
+					String result = fsmEngine.getData(getDataMessage.getQuery());
 
 					sender().tell(result, self());
 

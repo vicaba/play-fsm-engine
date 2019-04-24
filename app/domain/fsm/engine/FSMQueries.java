@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 class FSMQueries {
-	private static final String FSM_PREFIX = "file:///D:/projects/ontologies/fsm/fsm.owl#";
+	private static final String FSM_PREFIX = "file:///D:/projects/ontologies/fsm/fsm#";
 	private static final String HTTP_PREFIX = "http://www.w3.org/2011/http#";
 
 	static FiniteStateMachine readFSM(Model model, String serverBaseUri, String userFsmBaseUri, String userFsmUri) {
@@ -125,7 +125,7 @@ class FSMQueries {
 			ResultSet resultSet = qe.execSelect();
 
 			while (resultSet.hasNext()) {
-				var qs = resultSet.next();
+				QuerySolution qs = resultSet.next();
 
 				qs.varNames().forEachRemaining(key -> sb.append(qs.get(key).toString()).append(" "));
 
@@ -296,7 +296,7 @@ class FSMQueries {
 					}
 				}
 
-				int timeoutInMs = 1000;
+				int timeoutInMs = 2000;
 				if (sol.contains("timeoutInMs")) {
 					timeoutInMs = sol.getLiteral("timeoutInMs").getInt();
 				}
@@ -472,7 +472,7 @@ class FSMQueries {
 						"prefix : <" + userFsmBaseUri + "> " +
 						"SELECT ?state " +
 						"WHERE { " +
-						getFormattedIRI(userFsmUri) + " fsm:hasStateMachineElement ?state . " +
+						getFormattedIRI(userFsmUri) + " fsm:contains ?state . " +
 						"	?state a fsm:State . " +
 						"}";
 		Query query = QueryFactory.create(queryString);
@@ -556,7 +556,7 @@ class FSMQueries {
 				"		  prefix fsm: <" + FSM_PREFIX + "> " +
 						" SELECT ?initialState " +
 						" WHERE { " +
-						"<" + userFsmUri + "> fsm:hasStateMachineElement ?initialState . " +
+						"<" + userFsmUri + "> fsm:contains ?initialState . " +
 						"   ?initialState a fsm:InitialState . " +
 						" } " +
 						" LIMIT 1";

@@ -1,4 +1,5 @@
-name := """Play-FSM-Engine"""
+name := "Play-FSM-Engine"
+
 
 version := "1.0-SNAPSHOT"
 
@@ -10,11 +11,8 @@ libraryDependencies += guice
 
 libraryDependencies ++= Seq( ws )
 
-// https://mvnrepository.com/artifact/org.apache.jena/jena-core
-libraryDependencies += "org.apache.jena" % "jena-core" % "3.10.0"
-
-// https://mvnrepository.com/artifact/org.apache.jena/jena-arq
-libraryDependencies += "org.apache.jena" % "jena-arq" % "3.10.0"
+// https://mvnrepository.com/artifact/org.apache.jena/apache-jena-libs
+libraryDependencies += "org.apache.jena" % "apache-jena-libs" % "3.10.0" pomOnly()
 
 // Test Database
 libraryDependencies += "com.h2database" % "h2" % "1.4.197"

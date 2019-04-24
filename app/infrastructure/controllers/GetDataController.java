@@ -10,6 +10,7 @@ import application.fsm.SendDataMessage;
 import infrastructure.BodyParser;
 import play.mvc.*;
 import scala.concurrent.Await;
+import scala.concurrent.Future;
 
 import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
@@ -28,11 +29,11 @@ public class GetDataController extends Controller {
 
 			String body = BodyParser.parseRawBuffer(request().body().asRaw());
 
-			var timeout = new Timeout(5, TimeUnit.SECONDS);
+			Timeout timeout = new Timeout(5, TimeUnit.SECONDS);
 
-			var future = Patterns.ask(fsmActor, new GetDataMessage(body), timeout);
+			Future<Object> future = Patterns.ask(fsmActor, new GetDataMessage(body), timeout);
 
-			var result = "";
+			String result = "";
 			try {
 				result = (String) Await.result(future, timeout.duration());
 			} catch (Exception e) {

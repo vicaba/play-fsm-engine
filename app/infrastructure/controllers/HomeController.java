@@ -21,9 +21,8 @@ public class HomeController extends Controller {
 	 */
 	public Result index() {
 
-		final var uuid = UUID.randomUUID();
+		final UUID uuid = UUID.randomUUID();
 
 		return ok(index.render(uuid.toString()));
 	}
-
 }
