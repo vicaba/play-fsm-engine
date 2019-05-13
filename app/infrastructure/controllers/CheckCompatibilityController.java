@@ -12,7 +12,7 @@ import java.io.StringReader;
 public class CheckCompatibilityController extends Controller {
 
 	public CheckCompatibilityController() {
-		
+
 	}
 
 	public Result index() {

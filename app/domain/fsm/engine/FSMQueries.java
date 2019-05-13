@@ -403,7 +403,7 @@ class FSMQueries {
 						"WHERE { " +
 						guardIRI + " a fsm:Guard . " +
 						guardIRI + " fsm:hasGuardCondition ?condition . " +
-						"	?condition fsm:hasContent ?sparqlQuery . " +
+						"	?condition fsm:hasQuery ?sparqlQuery . " +
 						"}";
 
 		Query query = QueryFactory.create(queryString);
